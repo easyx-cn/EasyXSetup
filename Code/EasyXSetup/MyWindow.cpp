@@ -219,7 +219,7 @@ void MyWindow::P1()
 		float bottom = 45;
 		nk_layout_row(_ctx, NK_DYNAMIC, HEIGHT - bottom, 2, rt);
 
-		if (nk_group_begin(_ctx, "a", NK_WINDOW_NO_SCROLLBAR))
+		if (nk_group_begin(_ctx, "group_p1_logo", NK_WINDOW_NO_SCROLLBAR))
 		{
 			nk_layout_space_begin(_ctx, NK_STATIC, HEIGHT - 100, 2);
 			nk_layout_space_push(_ctx, nk_rect(0, 0, w, HEIGHT - bottom));
@@ -233,7 +233,7 @@ void MyWindow::P1()
 			nk_group_end(_ctx);
 		}
 
-		if (nk_group_begin(_ctx, "b", NK_WINDOW_NO_SCROLLBAR))
+		if (nk_group_begin(_ctx, "group_p1_summary", NK_WINDOW_NO_SCROLLBAR))
 		{
 			char buf[100] = { '\0' };
 			sprintf(buf, u8"欢迎使用 “EasyX %s” 安装向导", tochar(EASYX_VER));
@@ -306,11 +306,10 @@ void MyWindow::P2()
 
 		_ctx->style.window.fixed_background.data.color = nk_rgb(235, 235, 209);
 
-		if (nk_group_begin(_ctx, "a", 0)) {
+		if (nk_group_begin(_ctx, "group_p2_list", 0)) {		// group_p2_list 不能与其它 nk_group_begin 相同，否则会串滚
 			int i = 0, h = 26;
 			int cur_height = 10;
 
-			int s_w = textwidth(_T("天"));
 			int s_h = textheight(_T("天"));
 
 			for (list<VSIDE*>::iterator itor = ide_list.begin(); itor != ide_list.end(); itor++)
@@ -330,7 +329,8 @@ void MyWindow::P2()
 						nk_tooltip_begin(_ctx, 300.0f);
 						const char* str = toU8((*itor)->path_1);
 						int len = strlen(str);
-						float line = (len * s_w) / 300.0f;
+						int s_w = textwidth(toTCHAR(str));
+						float line = s_w / 300.0f + 1;
 						nk_layout_row_static(_ctx, line * s_h, 300, 1);
 						nk_label_colored_wrap(_ctx, str, nk_rgb(233, 233, 233));
 						nk_tooltip_end(_ctx);
@@ -346,7 +346,8 @@ void MyWindow::P2()
 						nk_tooltip_begin(_ctx, 300.0f);
 						const char* str = toU8((*itor)->path_2);
 						int len = strlen(str);
-						float line = (len * s_w) / 300.0f + 1;
+						int s_w = textwidth(toTCHAR(str));
+						float line = s_w / 300.0f + 1;
 						nk_layout_row_static(_ctx, line * s_h, 300, 1);
 						nk_label_colored_wrap(_ctx, str, nk_rgb(233, 233, 233));
 						nk_tooltip_end(_ctx);

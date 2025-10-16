@@ -32,7 +32,7 @@ tstring deleteFile(TCHAR const* dst);
 // 根据宽字节、多字节，返回其中一种
 const TCHAR* toTCHAR(const char* src);
 const char* toU8(const TCHAR* str, int len = -1);
-const char* tochar(const TCHAR* src);
+const char* tochar(const char* src);
 const char* tochar(const wchar_t* src);
 const wchar_t* towchar(const TCHAR* src);
 

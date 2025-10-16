@@ -1,0 +1,3 @@
+﻿;!@Install@!UTF-8!
+ExecuteFile="Setup.exe"
+;!@InstallEnd@!
