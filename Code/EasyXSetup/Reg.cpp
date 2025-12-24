@@ -324,6 +324,41 @@ tstring GetVCPath(int iVsVer, bool g_bX64)
 		}
 		break;
 	}
+
+	case 2026:
+	{
+		hKey = HKEY_LOCAL_MACHINE;
+		if (g_bX64)
+			subkeyname = _T("Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall");
+		else
+			subkeyname = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall");
+
+		int numKeys;
+		int len = lstrlen(subkeyname);
+		TCHAR** aNames = RegEnumKeys(hKey, subkeyname, &numKeys);
+		for (int i = 0; i < numKeys; i++)
+		{
+			int buf_len = len + 1 + lstrlen(aNames[i]) + 1;
+			TCHAR* buf = new TCHAR[buf_len];
+			_sntprintf_s(buf, buf_len, buf_len, _T("%s%s%s"), subkeyname, _T("\\"), aNames[i]);
+			buf[buf_len - 1] = '\0';
+
+			tstring rtn = RegRead(hKey, buf, _T("DisplayName"));
+			if (rtn != _T("")) {
+				const char* str = tochar(rtn.c_str());
+				regex rex("^Visual Studio (Community|Professional|Enterprise) 2026( \\([^\\)]+\\))?$", regex_constants::icase);  //   \\( 代替原来的 \(      匹配括号
+				string s = str;
+				bool result = regex_search(s, rex);
+				if (result)
+				{
+					subkeyname = buf;
+					key = _T("InstallLocation");
+					break;
+				}
+			}
+		}
+		break;
+	}
 	}
 
 	tstring localPath = RegRead(hKey, subkeyname, key);
@@ -347,6 +382,7 @@ tstring GetVCPath(int iVsVer, bool g_bX64)
 	case 2017:
 	case 2019:
 	case 2022:
+	case 2026:
 		if (localPath != _T("")) {
 			int len = lstrlen(localPath.c_str());
 			if (localPath[len - 1] != '\\')
@@ -390,7 +426,8 @@ TCHAR const* GetLibX86Path(int iVcVer) {
 	case 2015: return _T("lib\\");
 	case 2017:
 	case 2019:
-	case 2022: return _T("lib\\x86\\");
+	case 2022:
+	case 2026: return _T("lib\\x86\\");
 	}
 
 	return _T("");
@@ -406,7 +443,8 @@ TCHAR const* GetLibX64Path(int iVcVer) {
 	case 2015: return _T("lib\\amd64\\");
 	case 2017:
 	case 2019:
-	case 2022: return _T("lib\\x64\\");
+	case 2022:
+	case 2026: return _T("lib\\x64\\");
 	}
 	return _T("");
 }

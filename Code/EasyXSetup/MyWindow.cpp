@@ -21,12 +21,13 @@ struct nk_user_font ufont, boldFnot;
 
 #define WIDTH 490
 #define HEIGHT 328
+#define VSNUM 10
 
 EasyXFont* font;
 bool popup_active = false;
 string window_title, popup_msg;
 
-EGroups* eGroups[9] = {
+EGroups* eGroups[VSNUM] = {
 	new EGroups("  Visual C++ 6.0",6, "","","","", new int[2] {0,1}, new int[2] {2,3}, NULL),
 	new EGroups("  Visual C++ 2008",2008, "","","","", new int[2] {0,1},new int[2] {4,5},new int[2] {6, 7}),
 	new EGroups("  Visual C++ 2010",2010, "","","","", new int[2] {0,1},new int[2] {4,5},new int[2] {6, 7}),
@@ -35,7 +36,8 @@ EGroups* eGroups[9] = {
 	new EGroups("  Visual C++ 2015",2015, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
 	new EGroups("  Visual C++ 2017",2017, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
 	new EGroups("  Visual C++ 2019",2019, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
-	new EGroups("  Visual C++ 2022",2022, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11})
+	new EGroups("  Visual C++ 2022",2022, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
+	new EGroups("  Visual C++ 2026",2026, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11})
 };
 
 // 主函数
@@ -118,7 +120,7 @@ void InitIDE()
 	if (amd != _T("") && _tcscmp(amd.c_str(), _T("AMD64")) == 0)
 		g_bX64 = true;
 
-	for (int i = 0; i < 9; i++)
+	for (int i = 0; i < VSNUM; i++)
 	{
 		int v = eGroups[i]->ver;
 		string name = eGroups[i]->name;
