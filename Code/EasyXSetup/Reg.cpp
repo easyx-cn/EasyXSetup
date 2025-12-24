@@ -435,7 +435,7 @@ TCHAR const* GetLibX86Path(int iVcVer) {
 
 TCHAR const* GetLibX64Path(int iVcVer) {
 	switch (iVcVer) {
-	case 6:     return NULL;
+	case 6:     return _T("");
 	case 2008:
 	case 2010:
 	case 2012:
@@ -450,23 +450,23 @@ TCHAR const* GetLibX64Path(int iVcVer) {
 }
 
 
-const char* g_pathDesktop() {
+const TCHAR* g_pathDesktop() {
 	wchar_t* path = NULL;
 	HRESULT result = SHGetKnownFolderPath(FOLDERID_Desktop, 0, NULL, &path);
 	if (result != S_OK)
 		return NULL;
 	//CoTaskMemFree(path);
 
-	return tochar(path);
+	return toTCHAR(tochar(path));
 }
 
 TCHAR* help_path() {
-	const char* dest = g_pathDesktop();
+	const TCHAR* dest = g_pathDesktop();
 	TCHAR const* p2 = TEXT("\\EasyX_Help.lnk");
 
-	int len = lstrlen(toTCHAR(dest)) + lstrlen(p2) + 1;
+	int len = lstrlen(dest) + lstrlen(p2) + 1;
 	TCHAR* buf = new TCHAR[len];
-	_sntprintf_s(buf, len, len, _T("%s%s"), toTCHAR(dest), p2);
+	_sntprintf_s(buf, len, len, _T("%s%s"), dest, p2);
 	buf[len - 1] = '\0';
 
 	return buf;
@@ -532,7 +532,7 @@ tstring copy_Files(TCHAR const* src, TCHAR const* dst)
 	try {
 		bool result = CopyFile(src, dst, false);  // 会覆盖源文件
 		if (!result)
-			return (tstring)toTCHAR(u8"安装失败");
+			return (tstring)toTCHAR("安装失败");
 	}
 	catch (exception ex)
 	{

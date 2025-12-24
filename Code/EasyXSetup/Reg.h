@@ -39,6 +39,6 @@ const wchar_t* towchar(const TCHAR* src);
 const TCHAR* spliceString(TCHAR const* s1, TCHAR const* s2);
 
 tstring copy_Files(TCHAR const* src, TCHAR const* dst);
-const char* g_pathDesktop();
+const TCHAR* g_pathDesktop();
 TCHAR* help_path();
 bool CreateLinkFile(LPCTSTR urlexePath, LPCTSTR szDestLnkPath);

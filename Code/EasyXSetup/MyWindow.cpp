@@ -25,19 +25,26 @@ struct nk_user_font ufont, boldFnot;
 
 EasyXFont* font;
 bool popup_active = false;
-string window_title, popup_msg;
+string window_title;
+tstring popup_msg;
+int a[2] = { 0, 1 };
+int b1[2] = { 2, 3 };
+int b2[2] = { 4, 5 };
+int b3[2] = { 8, 9 };
+int b4[2] = { 6, 7 };
+int b5[2] = { 10, 11 };
 
 EGroups* eGroups[VSNUM] = {
-	new EGroups("  Visual C++ 6.0",6, "","","","", new int[2] {0,1}, new int[2] {2,3}, NULL),
-	new EGroups("  Visual C++ 2008",2008, "","","","", new int[2] {0,1},new int[2] {4,5},new int[2] {6, 7}),
-	new EGroups("  Visual C++ 2010",2010, "","","","", new int[2] {0,1},new int[2] {4,5},new int[2] {6, 7}),
-	new EGroups("  Visual C++ 2012",2012, "","","","", new int[2] {0,1},new int[2] {4,5},new int[2] {6, 7}),
-	new EGroups("  Visual C++ 2013",2013, "","","","", new int[2] {0,1},new int[2] {4,5},new int[2] {6, 7}),
-	new EGroups("  Visual C++ 2015",2015, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
-	new EGroups("  Visual C++ 2017",2017, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
-	new EGroups("  Visual C++ 2019",2019, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
-	new EGroups("  Visual C++ 2022",2022, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11}),
-	new EGroups("  Visual C++ 2026",2026, "","","","", new int[2] {0,1},new int[2] {8,9},new int[2] {10, 11})
+	new EGroups(_T("  Visual C++ 6.0"),6, _T(""),_T(""),_T(""),_T(""), a, b1, NULL),
+	new EGroups(_T("  Visual C++ 2008"),2008, _T(""),_T(""),_T(""),_T(""), a,b2,b4),
+	new EGroups(_T("  Visual C++ 2010"),2010, _T(""),_T(""),_T(""),_T(""), a,b2,b4),
+	new EGroups(_T("  Visual C++ 2012"),2012, _T(""),_T(""),_T(""),_T(""), a,b2,b4),
+	new EGroups(_T("  Visual C++ 2013"),2013, _T(""),_T(""),_T(""),_T(""), a,b2,b4),
+	new EGroups(_T("  Visual C++ 2015"),2015, _T(""),_T(""),_T(""),_T(""), a,b3,b5),
+	new EGroups(_T("  Visual C++ 2017"),2017, _T(""),_T(""),_T(""),_T(""), a,b3,b5),
+	new EGroups(_T("  Visual C++ 2019"),2019, _T(""),_T(""),_T(""),_T(""), a,b3,b5),
+	new EGroups(_T("  Visual C++ 2022"),2022, _T(""),_T(""),_T(""),_T(""), a,b3,b5),
+	new EGroups(_T("  Visual C++ 2026"),2026, _T(""),_T(""),_T(""),_T(""), a,b3,b5)
 };
 
 // 主函数
@@ -109,9 +116,9 @@ MyWindow::~MyWindow()
 
 void InitIDE()
 {
-	string path = "桌面路径 ";
+	tstring path = _T("桌面路径 ");
 	path += g_pathDesktop();
-	VSIDE* d = new VSIDE(_T("  EasyX 文档"), _T("在线文档 https://docs.easyx.cn"), toTCHAR(path.c_str()), -1, true);
+	VSIDE* d = new VSIDE(_T("  EasyX 文档"), _T("在线文档 https://docs.easyx.cn"), path.c_str(), -1, true);
 	ide_list.push_back(d);
 
 	bool g_bX64 = false;
@@ -123,51 +130,51 @@ void InitIDE()
 	for (int i = 0; i < VSNUM; i++)
 	{
 		int v = eGroups[i]->ver;
-		string name = eGroups[i]->name;
+		tstring name = eGroups[i]->name;
 		tstring vcpath = GetVCPath(v, g_bX64);
 
 		if (vcpath == _T(""))
 		{
-			VSIDE* item = new VSIDE(toTCHAR(name.c_str()), _T(""), _T(""), i, false);
+			VSIDE* item = new VSIDE(name.c_str(), _T(""), _T(""), i, false);
 			not_exist_list.push_back(item);
 			continue;
 		}
 
-		eGroups[i]->vcpath = tochar(vcpath.c_str());
-		eGroups[i]->path_h = tochar(GetIncludePath(v));
+		eGroups[i]->vcpath = vcpath.c_str();
+		eGroups[i]->path_h = GetIncludePath(v);
 
-		if (_access((eGroups[i]->vcpath + eGroups[i]->path_h).c_str(), 0) != 0) {
-			eGroups[i]->vcpath = "";
-			eGroups[i]->path_h = "";
+		if (_taccess((eGroups[i]->vcpath + eGroups[i]->path_h).c_str(), 0) != 0) {
+			eGroups[i]->vcpath = _T("");
+			eGroups[i]->path_h = _T("");
 
-			VSIDE* item = new VSIDE(toTCHAR(name.c_str()), _T(""), _T(""), i, false);
+			VSIDE* item = new VSIDE(name.c_str(), _T(""), _T(""), i, false);
 			not_exist_list.push_back(item);
 			continue;
 		}
 
-		eGroups[i]->path_libx86 = tochar(GetLibX86Path(v));
-		if (_access((eGroups[i]->vcpath + eGroups[i]->path_libx86).c_str(), 0) != 0) {
-			eGroups[i]->vcpath = "";
-			eGroups[i]->path_h = "";
-			eGroups[i]->path_libx86 = "";
+		eGroups[i]->path_libx86 = GetLibX86Path(v);
+		if (_taccess((eGroups[i]->vcpath + eGroups[i]->path_libx86).c_str(), 0) != 0) {
+			eGroups[i]->vcpath = _T("");
+			eGroups[i]->path_h = _T("");
+			eGroups[i]->path_libx86 = _T("");
 
-			VSIDE* item = new VSIDE(toTCHAR(name.c_str()), _T(""), _T(""), i, false);
+			VSIDE* item = new VSIDE(name.c_str(), _T(""), _T(""), i, false);
 			not_exist_list.push_back(item);
 			continue;
 		}
 
-		eGroups[i]->path_libx64 = tochar(GetLibX64Path(v));
-		if (_access((eGroups[i]->vcpath + eGroups[i]->path_libx64).c_str(), 0) != 0) {
-			eGroups[i]->path_libx64 = "";
+		eGroups[i]->path_libx64 = GetLibX64Path(v);
+		if (_taccess((eGroups[i]->vcpath + eGroups[i]->path_libx64).c_str(), 0) != 0) {
+			eGroups[i]->path_libx64 = _T("");
 		}
 
-		string path1 = "头文件路径 " + eGroups[i]->vcpath + eGroups[i]->path_h;
-		string path2 = "库文件路径 " + eGroups[i]->vcpath + eGroups[i]->path_libx86;
+		tstring path1 = _T("头文件路径 ") + eGroups[i]->vcpath + eGroups[i]->path_h;
+		tstring path2 = _T("库文件路径 ") + eGroups[i]->vcpath + eGroups[i]->path_libx86;
 
-		if (eGroups[i]->path_libx64 != "") {
-			path2 += " " + eGroups[i]->vcpath + eGroups[i]->path_libx64;
+		if (eGroups[i]->path_libx64 != _T("")) {
+			path2 += _T(" ") + eGroups[i]->vcpath + eGroups[i]->path_libx64;
 		}
-		VSIDE* item = new VSIDE(toTCHAR(name.c_str()), toTCHAR(path1.c_str()), toTCHAR(path2.c_str()), i, true);
+		VSIDE* item = new VSIDE(name.c_str(), path1.c_str(), path2.c_str(), i, true);
 		exist_list.push_back(item);
 	}
 
@@ -238,7 +245,7 @@ void MyWindow::P1()
 		if (nk_group_begin(_ctx, "group_p1_summary", NK_WINDOW_NO_SCROLLBAR))
 		{
 			char buf[100] = { '\0' };
-			sprintf(buf, u8"欢迎使用 “EasyX %s” 安装向导", tochar(EASYX_VER));
+			sprintf(buf, tochar(_T("欢迎使用 “EasyX %s” 安装向导")), tochar(EASYX_VER));
 
 			nk_fill_rect(&_ctx->current->buffer, nk_rect(w, 0, (float)(WIDTH * rt[1]), HEIGHT - bottom), 0.0f, nk_rgb(245, 245, 239));
 
@@ -248,18 +255,18 @@ void MyWindow::P1()
 			nk_text_style(_ctx, buf, NK_TEXT_CENTERED, f, nk_vec2(0, 0), nk_rgb(33, 33, 33));
 			nk_layout_row_dynamic(_ctx, 15, 1);
 			nk_layout_row_dynamic(_ctx, 18, 1);
-			nk_label_colored(_ctx, "  EasyX 库为 C/C++ 提供了简单的绘图接口，可以帮助", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
-			nk_label_colored(_ctx, "  您快速编写图形程序。", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+			nk_label_colored(_ctx, tochar(_T("  EasyX 库为 C/C++ 提供了简单的绘图接口，可以帮助")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+			nk_label_colored(_ctx, tochar(_T("  您快速编写图形程序。")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 			nk_layout_row_dynamic(_ctx, 7, 1);
 			nk_layout_row_dynamic(_ctx, 18, 1);
-			nk_label_colored(_ctx, "  这个向导将帮助您安装 EasyX 库到指定开发环境中。", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
-			nk_label_colored(_ctx, "  EasyX 目前支持 Visual C++ 6 / 2008 ～ 2022。", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+			nk_label_colored(_ctx, tochar(_T("  这个向导将帮助您安装 EasyX 库到指定开发环境中。")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+			nk_label_colored(_ctx, tochar(_T("  EasyX 目前支持 Visual C++ 6 / 2008 ～ 2022。")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 			nk_layout_row_dynamic(_ctx, 7, 1);
 			nk_layout_row_dynamic(_ctx, 18, 1);
-			nk_label_colored(_ctx, "  如果您希望手动安装 EasyX，请参见帮助文件。", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+			nk_label_colored(_ctx, tochar(_T("  如果您希望手动安装 EasyX，请参见帮助文件。")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 			nk_layout_row_dynamic(_ctx, 7, 1);
 			nk_layout_row_dynamic(_ctx, 18, 1);
-			nk_label_colored(_ctx, "  单击 [下一步] 继续。", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+			nk_label_colored(_ctx, tochar(_T("  单击 [下一步] 继续。")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 			nk_group_end(_ctx);
 		}
 
@@ -269,11 +276,11 @@ void MyWindow::P1()
 		nk_style_button btn = enableStyle();
 		nk_layout_space_begin(_ctx, NK_STATIC, 10, 2);
 		nk_layout_space_push(_ctx, nk_rect(WIDTH - 200, 7, 80, 25));
-		if (nk_button_label_styled(_ctx, &btn, "下一步 >"))
+		if (nk_button_label_styled(_ctx, &btn, tochar(_T("下一步 >"))))
 			current_page = 2;
 
 		nk_layout_space_push(_ctx, nk_rect(WIDTH - 100, 7, 80, 25));
-		if (nk_button_label_styled(_ctx, &btn, "关闭"))
+		if (nk_button_label_styled(_ctx, &btn, tochar(_T("关闭"))))
 			running = false;
 
 		nk_layout_space_end(_ctx);
@@ -291,14 +298,14 @@ void MyWindow::P2()
 
 		nk_layout_row_dynamic(_ctx, 16, 1);
 		nk_user_font* f = boldFont(&_ctx->style);
-		nk_text_style(_ctx, "  执行安装", NK_TEXT_LEFT, f, nk_vec2(0, 0), nk_rgb(33, 33, 33));
+		nk_text_style(_ctx, tochar(_T("  执行安装")), NK_TEXT_LEFT, f, nk_vec2(0, 0), nk_rgb(33, 33, 33));
 		nk_layout_row_dynamic(_ctx, 1, 1);
 		nk_layout_row_dynamic(_ctx, 16, 1);
-		nk_label_colored(_ctx, "        请针对您所用的开发平台，选择安装或卸载。", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+		nk_label_colored(_ctx, tochar(_T("        请针对您所用的开发平台，选择安装或卸载。")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 		nk_layout_row_dynamic(_ctx, 8, 1);
 		nk_layout_row_dynamic(_ctx, 16, 1);
-		nk_label_colored(_ctx, "  在下面中找到您所用的开发平台，点击右侧的“安装”将 EasyX 库安装至", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
-		nk_label_colored(_ctx, "  该开发平台。或点击右侧的“卸载”将 EasyX 库从该开发平台移除。", NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+		nk_label_colored(_ctx, tochar(_T("  在下面中找到您所用的开发平台，点击右侧的“安装”将 EasyX 库安装至")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+		nk_label_colored(_ctx, tochar(_T("  该开发平台。或点击右侧的“卸载”将 EasyX 库从该开发平台移除。")), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 
 		float rt[] = { 1.0f };
 		nk_style_button btn = enableStyle();
@@ -318,18 +325,18 @@ void MyWindow::P2()
 			{
 				nk_layout_space_begin(_ctx, NK_STATIC, 35, 5);
 				nk_layout_space_push(_ctx, nk_rect(0, 0, 110, 30));
-				nk_label_colored(_ctx, toU8((*itor)->name), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+				nk_label_colored(_ctx, toU8((*itor)->name.c_str()), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 
 				if ((*itor)->exist == true)
 				{
 					nk_layout_space_push(_ctx, nk_rect(110, 0, 230, 13));
-					nk_label_colored(_ctx, toU8((*itor)->path_1), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+					nk_label_colored(_ctx, toU8((*itor)->path_1.c_str()), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 					struct nk_rect bounds = nk_widget_bounds(_ctx);
 
 					// 鼠标悬浮 tooltip
 					if (!popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds)) {
 						nk_tooltip_begin(_ctx, 300.0f);
-						const char* str = toU8((*itor)->path_1);
+						const char* str = toU8((*itor)->path_1.c_str());
 						int len = strlen(str);
 						int s_w = textwidth(toTCHAR(str));
 						float line = s_w / 300.0f + 1;
@@ -339,14 +346,14 @@ void MyWindow::P2()
 					}
 
 					nk_layout_space_push(_ctx, nk_rect(110, 16, 230, 13));
-					nk_label_colored(_ctx, toU8((*itor)->path_2), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
+					nk_label_colored(_ctx, toU8((*itor)->path_2.c_str()), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 					bounds = nk_widget_bounds(_ctx);
 
 					// 鼠标悬浮 tooltip
 					if (!popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds))
 					{
 						nk_tooltip_begin(_ctx, 300.0f);
-						const char* str = toU8((*itor)->path_2);
+						const char* str = toU8((*itor)->path_2.c_str());
 						int len = strlen(str);
 						int s_w = textwidth(toTCHAR(str));
 						float line = s_w / 300.0f + 1;
@@ -356,7 +363,7 @@ void MyWindow::P2()
 					}
 
 					nk_layout_space_push(_ctx, nk_rect(WIDTH - 135, 0, 45, 30));
-					if (nk_button_label_styled(_ctx, &btn, "安装"))
+					if (nk_button_label_styled(_ctx, &btn, tochar(_T("安装"))))
 					{
 						tstring s;
 						if ((*itor)->id == -1)
@@ -365,15 +372,15 @@ void MyWindow::P2()
 							s = Install((*itor)->id);
 
 						if (s.size() == 0)
-							popup_msg = "安装成功";
+							popup_msg = _T("安装成功");
 						else
-							popup_msg = tochar(s.c_str());
+							popup_msg = s;
 
 						popup_active = true;
 					}
 
 					nk_layout_space_push(_ctx, nk_rect(WIDTH - 85, 0, 45, 30));
-					if (nk_button_label_styled(_ctx, &btn, "卸载"))
+					if (nk_button_label_styled(_ctx, &btn, tochar(_T("卸载"))))
 					{
 						tstring s;
 						if ((*itor)->id == -1)
@@ -382,19 +389,19 @@ void MyWindow::P2()
 							s = Uninstall((*itor)->id);
 
 						popup_active = true;
-						popup_msg = tochar(s.c_str());
+						popup_msg = s;
 					}
 				}
 				else	// 灰色按钮
 				{
 					nk_layout_space_push(_ctx, nk_rect(110, 0, 230, 30));
-					nk_label(_ctx, "(未检测到)", NK_TEXT_LEFT);
+					nk_label(_ctx, tochar(_T("(未检测到)")), NK_TEXT_LEFT);
 
 					nk_layout_space_push(_ctx, nk_rect(WIDTH - 135, 0, 45, 30));
-					nk_button_label_styled(_ctx, &button, "安装");
+					nk_button_label_styled(_ctx, &button, tochar(_T("安装")));
 
 					nk_layout_space_push(_ctx, nk_rect(WIDTH - 85, 0, 45, 30));
-					nk_button_label_styled(_ctx, &button, "卸载");
+					nk_button_label_styled(_ctx, &button, tochar(_T("卸载")));
 				}
 
 				i++;
@@ -411,7 +418,7 @@ void MyWindow::P2()
 			{
 				nk_layout_row_dynamic(_ctx, 5, 1);
 				nk_layout_row_dynamic(_ctx, 16, 1);
-				nk_label_colored(_ctx, popup_msg.c_str(), NK_TEXT_CENTERED, nk_rgb(33, 33, 33));
+				nk_label_colored(_ctx, tochar(popup_msg.c_str()), NK_TEXT_CENTERED, nk_rgb(33, 33, 33));
 				nk_layout_row_dynamic(_ctx, 10, 1);
 				nk_layout_row_dynamic(_ctx, 25, 1);
 				if (nk_button_label_styled(_ctx, &btn, "OK")) {
@@ -424,16 +431,16 @@ void MyWindow::P2()
 		}
 
 		nk_layout_row_dynamic(_ctx, 6, 1);
-		nk_label_colored(_ctx, "EasyX Install System v5.0 —————————————————————————————", NK_TEXT_LEFT, nk_rgb(123, 123, 123));
+		nk_label_colored(_ctx, tochar(_T("EasyX Install System v5.0 —————————————————————————————")), NK_TEXT_LEFT, nk_rgb(123, 123, 123));
 		nk_layout_row_dynamic(_ctx, 1, 1);
 
 		nk_layout_space_begin(_ctx, NK_STATIC, 25, 2);
 		nk_layout_space_push(_ctx, nk_rect(WIDTH - 200, 0, 80, 25));
-		if (nk_button_label_styled(_ctx, &btn, "< 上一步"))
+		if (nk_button_label_styled(_ctx, &btn, tochar(_T("< 上一步"))))
 			current_page = 1;
 
 		nk_layout_space_push(_ctx, nk_rect(WIDTH - 100, 0, 80, 25));
-		if (nk_button_label_styled(_ctx, &btn, "取消"))
+		if (nk_button_label_styled(_ctx, &btn, tochar(_T("取消"))))
 			running = false;
 		nk_layout_space_end(_ctx);
 	}
@@ -545,7 +552,7 @@ nk_user_font* boldFont(nk_style* style)
 void UninstallOldEasyX(int id) {
 	int len_ = eGroups[id]->ver;
 	if (eGroups[id]->ver == 2017 || eGroups[id]->ver == 2019) {
-		string oldpath = eGroups[id]->vcpath.c_str();
+		string oldpath = tochar(eGroups[id]->vcpath.c_str());
 		if (oldpath.length() > 13 && oldpath.substr(oldpath.length() - 14, 14) == "\\Auxiliary\\VS\\") {
 			oldpath = oldpath.substr(0, oldpath.length() - 13);
 			string verfile = oldpath + "Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt";
@@ -559,23 +566,23 @@ void UninstallOldEasyX(int id) {
 				oldpath += "Tools\\MSVC\\" + str + "\\";
 
 				string f;
-				if (eGroups[id]->files_h != NULL) {
+				if (eGroups[id]->path_h != _T("")) {
 					for (int i = 0; i < 2; i++) {
-						f = oldpath + eGroups[id]->path_h + eFiles[eGroups[id]->files_h[i]]->name;
+						f = oldpath + tochar(eGroups[id]->path_h.c_str()) + tochar(eFiles[eGroups[id]->files_h[i]]->name.c_str());
 						deleteFile(toTCHAR(f.c_str()));
 					}
 				}
 
-				if (eGroups[id]->files_libx86 != NULL) {
+				if (eGroups[id]->path_libx86 != _T("")) {
 					for (int i = 0; i < 2; i++) {
-						f = oldpath + eGroups[id]->path_libx86 + eFiles[eGroups[id]->files_libx86[i]]->name;
+						f = oldpath + tochar(eGroups[id]->path_libx86.c_str()) + tochar(eFiles[eGroups[id]->files_libx86[i]]->name.c_str());
 						deleteFile(toTCHAR(f.c_str()));
 					}
 				}
 
-				if (eGroups[id]->files_libx64 != NULL) {
+				if (eGroups[id]->path_libx64 != _T("")) {
 					for (int i = 0; i < 2; i++) {
-						f = oldpath + eGroups[id]->path_libx64 + eFiles[eGroups[id]->files_libx64[i]]->name;
+						f = oldpath + tochar(eGroups[id]->path_libx64.c_str()) + tochar(eFiles[eGroups[id]->files_libx64[i]]->name.c_str());
 						deleteFile(toTCHAR(f.c_str()));
 					}
 				}
@@ -597,32 +604,33 @@ tstring Install(int id)
 	string strExeName = strFullPath.substr(0, nStart + 1);
 
 	tstring err = _T("");
+	string e = "";
 	if (eGroups[id]->files_h != NULL) {
 		for (int i = 0; i < 2; i++) {
-			string src = eFiles[eGroups[id]->files_h[i]]->path + eFiles[eGroups[id]->files_h[i]]->name;
-			string dst = eGroups[id]->vcpath + eGroups[id]->path_h + eFiles[eGroups[id]->files_h[i]]->name;
+			string src = tochar(eFiles[eGroups[id]->files_h[i]]->path.c_str()) + eFiles[eGroups[id]->files_h[i]]->name;
+			string dst = tochar(eGroups[id]->vcpath.c_str()) + e + tochar(eGroups[id]->path_h.c_str()) + eFiles[eGroups[id]->files_h[i]]->name;
 			err += copy_Files(toTCHAR((strExeName + src).c_str()), toTCHAR(dst.c_str()));
 
 			if (err != _T(""))
-				return err;
+				return _T("安装失败");
 		}
 	}
 	if (eGroups[id]->files_libx86 != NULL) {
 		for (int i = 0; i < 2; i++) {
-			string src = eFiles[eGroups[id]->files_libx86[i]]->path + eFiles[eGroups[id]->files_libx86[i]]->name;
-			string dst = eGroups[id]->vcpath + eGroups[id]->path_libx86 + eFiles[eGroups[id]->files_libx86[i]]->name;
+			string src = tochar(eFiles[eGroups[id]->files_libx86[i]]->path.c_str()) + eFiles[eGroups[id]->files_libx86[i]]->name;
+			string dst = tochar(eGroups[id]->vcpath.c_str()) + e + tochar(eGroups[id]->path_libx86.c_str()) + eFiles[eGroups[id]->files_libx86[i]]->name;
 			err += copy_Files(toTCHAR((strExeName + src).c_str()), toTCHAR(dst.c_str()));
 			if (err != _T(""))
-				return err;
+				return _T("安装失败");
 		}
 	}
-	if (eGroups[id]->path_libx64 != "" && eGroups[id]->files_libx64 != NULL) {
+	if (eGroups[id]->path_libx64 != _T("") && eGroups[id]->files_libx64 != NULL) {
 		for (int i = 0; i < 2; i++) {
-			string src = eFiles[eGroups[id]->files_libx64[i]]->path + eFiles[eGroups[id]->files_libx64[i]]->name;
-			string dst = eGroups[id]->vcpath + eGroups[id]->path_libx64 + eFiles[eGroups[id]->files_libx64[i]]->name;
+			string src = tochar(eFiles[eGroups[id]->files_libx64[i]]->path.c_str()) + eFiles[eGroups[id]->files_libx64[i]]->name;
+			string dst = tochar(eGroups[id]->vcpath.c_str()) + e + tochar(eGroups[id]->path_libx64.c_str()) + eFiles[eGroups[id]->files_libx64[i]]->name;
 			err += copy_Files(toTCHAR((strExeName + src).c_str()), toTCHAR(dst.c_str()));
 			if (err != _T(""))
-				return err;
+				return _T("安装失败");
 		}
 	}
 
@@ -636,28 +644,28 @@ tstring Uninstall(int id) {
 
 	bool result = false;
 	tstring err = _T("卸载失败");
-	string f;
-	if (eGroups[id]->files_h != NULL) {
+	string f, e = "";
+	if (eGroups[id]->path_h != _T("")) {
 		for (int i = 0; i < 2; i++) {
-			f = eGroups[id]->vcpath + eGroups[id]->path_h + eFiles[eGroups[id]->files_h[i]]->name;
+			f = tochar(eGroups[id]->vcpath.c_str())  + e + tochar(eGroups[id]->path_h.c_str()) + eFiles[eGroups[id]->files_h[i]]->name;
 			result = DeleteFile(toTCHAR(f.c_str()));
 			if (!result)
 				return err;
 		}
 	}
 
-	if (eGroups[id]->files_libx86 != NULL) {
+	if (eGroups[id]->path_libx86 != _T("")) {
 		for (int i = 0; i < 2; i++) {
-			f = eGroups[id]->vcpath + eGroups[id]->path_libx86 + eFiles[eGroups[id]->files_libx86[i]]->name;
+			f = tochar(eGroups[id]->vcpath.c_str()) + e + tochar(eGroups[id]->path_libx86.c_str()) + eFiles[eGroups[id]->files_libx86[i]]->name;
 			result = DeleteFile(toTCHAR(f.c_str()));
 			if (!result)
 				return err;
 		}
 	}
 
-	if (eGroups[id]->files_libx64 != NULL) {
+	if (eGroups[id]->path_libx64 != _T("")) {
 		for (int i = 0; i < 2; i++) {
-			f = eGroups[id]->vcpath + eGroups[id]->path_libx64 + eFiles[eGroups[id]->files_libx64[i]]->name;
+			f = tochar(eGroups[id]->vcpath.c_str()) + e + tochar(eGroups[id]->path_libx64.c_str()) + eFiles[eGroups[id]->files_libx64[i]]->name;
 			result = DeleteFile(toTCHAR(f.c_str()));
 			if (!result)
 				return err;
@@ -676,7 +684,7 @@ tstring UninstallHelp() {
 	if (err == _T(""))
 		return _T("卸载成功");
 	else
-		return _T("下载失败");
+		return _T("卸载失败");
 }
 tstring InstallHelp() {
 	bool result = CreateLinkFile(TEXT("https://docs.easyx.cn"), help_path());

@@ -55,15 +55,15 @@ class VSIDE
 {
 public:
 	int id;			// 对应 eGroups 下标
-	TCHAR const* name;
-	TCHAR const* path_1;
-	TCHAR const* path_2;
+	tstring name;
+	tstring path_1;
+	tstring path_2;
 	bool checked;		// 是否勾选安装
 	bool installed;		// 是否安装成功
 	string msg;
 	bool exist;
 
-	VSIDE(TCHAR const* n, TCHAR const* p1, TCHAR const* p2, int i, bool e) {
+	VSIDE(tstring n, tstring p1, tstring p2, int i, bool e) {
 		name = n;
 		path_1 = p1;
 		path_2 = p2;
@@ -107,17 +107,17 @@ EFiles* eFiles[] = {
 class EGroups
 {
 public:
-	string name;
+	tstring name;
 	int ver;
-	string vcpath;
-	string path_h;
-	string path_libx86;
-	string path_libx64;
+	tstring vcpath;
+	tstring path_h;
+	tstring path_libx86;
+	tstring path_libx64;
 	int* files_h;
 	int* files_libx86;
 	int* files_libx64;
 
-	EGroups(string n, int v, string vp, string p_h, string px86, string px64, int fh[2], int* fx86, int* fx64)
+	EGroups(tstring n, int v, tstring vp, tstring p_h, tstring px86, tstring px64, int fh[2], int* fx86, int* fx64)
 	{
 		name = n;
 		ver = v;
@@ -127,7 +127,7 @@ public:
 		path_libx64 = px64;
 		files_h = fh;
 		files_libx86 = fx86;
-		files_libx64 = fx64;
+		files_libx64 = fx64;	// 对应全局变量 eFiles 的下标，决定使用哪两个 lib 文件
 	}
 	~EGroups() {}
 };
