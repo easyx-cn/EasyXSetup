@@ -39,7 +39,6 @@ NK_API void nk_easyx_set_font(EasyXFont* font);
  *
  * ===============================================================
  */
-#ifdef NK_EASYX_IMPLEMENTATION
 #include <string.h>
 #include <stdlib.h>
 #include <malloc.h>
@@ -1019,5 +1018,3 @@ nk_easyx_render(struct nk_color clear)
     }
     nk_clear(&easyx.ctx);
 }
-
-#endif
