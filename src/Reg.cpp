@@ -8,7 +8,7 @@
 using namespace std;
 
 
-wchar_t** RegEnumKeys(HKEY defkey, wchar_t const* subkeyname, int* numkeys)
+wchar_t** Reg::RegEnumKeys(HKEY defkey, wchar_t const* subkeyname, int* numkeys)
 {
 	wchar_t** list = NULL;
 	HKEY hKey;
@@ -76,7 +76,7 @@ wchar_t** RegEnumKeys(HKEY defkey, wchar_t const* subkeyname, int* numkeys)
 /// </summary>
 /// <param name="defkey"></param>
 /// <param name="subkeyname"></param>
-wstring RegRead(HKEY defkey, wchar_t const* subkeyname, wchar_t const* key)
+wstring Reg::RegRead(HKEY defkey, wchar_t const* subkeyname, wchar_t const* key)
 {
 	if (key == NULL)
 		return L"";
@@ -156,7 +156,7 @@ wstring RegRead(HKEY defkey, wchar_t const* subkeyname, wchar_t const* key)
 	return str;
 }
 
-wstring GetVCPath(int iVsVer, bool g_bX64)
+wstring Reg::GetVCPath(int iVsVer, bool g_bX64)
 {
 	HKEY hKey = HKEY_LOCAL_MACHINE;
 	wchar_t const* path = NULL;
@@ -398,14 +398,14 @@ wstring GetVCPath(int iVsVer, bool g_bX64)
 	return localPath;
 }
 
-wchar_t const* GetIncludePath(int iVsVer) {
+wchar_t const* Reg::GetIncludePath(int iVsVer) {
 	if (iVsVer == 6)
 		return L"Include\\";
 
 	return L"include\\";
 }
 
-wchar_t const* GetLibX86Path(int iVcVer) {
+wchar_t const* Reg::GetLibX86Path(int iVcVer) {
 	switch (iVcVer) {
 	case 6:     return L"Lib\\";
 	case 2008:
@@ -422,7 +422,7 @@ wchar_t const* GetLibX86Path(int iVcVer) {
 	return L"";
 }
 
-wchar_t const* GetLibX64Path(int iVcVer) {
+wchar_t const* Reg::GetLibX64Path(int iVcVer) {
 	switch (iVcVer) {
 	case 6:     return L"";
 	case 2008:
@@ -436,110 +436,4 @@ wchar_t const* GetLibX64Path(int iVcVer) {
 	case 2026: return L"lib\\x64\\";
 	}
 	return L"";
-}
-
-
-const wchar_t* g_pathDesktop() {
-	wchar_t* path = NULL;
-	HRESULT result = SHGetKnownFolderPath(FOLDERID_Desktop, 0, NULL, &path);
-	if (result != S_OK)
-		return NULL;
-	//CoTaskMemFree(path);
-
-	return path;
-}
-
-wchar_t* help_path() {
-	const wchar_t* dest = g_pathDesktop();
-	wchar_t const* p2 = L"\\EasyX_Help.lnk";
-
-	int len = lstrlenW(dest) + lstrlenW(p2) + 1;
-	wchar_t* buf = new wchar_t[len];
-	_snwprintf_s(buf, len, len, L"%s%s", dest, p2);
-	buf[len - 1] = L'\0';
-
-	return buf;
-}
-
-/// <summary>
-/// 创建快捷方式
-/// </summary>
-/// <param name="szStartAppPath"></param>
-/// <param name="szDestLnkPath"></param>
-/// <returns></returns>
-bool CreateLinkFile(LPCWSTR urlexePath, LPCWSTR szDestLnkPath)
-{
-	HRESULT hr = CoInitialize(NULL);
-	if (SUCCEEDED(hr))
-	{
-		IShellLinkW* pShellLink;
-		hr = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&pShellLink);
-		if (SUCCEEDED(hr))
-		{
-			pShellLink->SetPath(urlexePath);
-			wstring strTmp = urlexePath;
-			size_t nStart = strTmp.find_last_of(L"/\\");
-			pShellLink->SetWorkingDirectory(strTmp.substr(0, nStart).c_str());
-			IPersistFile* pPersistFile;
-			hr = pShellLink->QueryInterface(IID_IPersistFile, (void**)&pPersistFile);
-			if (SUCCEEDED(hr))
-			{
-				hr = pPersistFile->Save(szDestLnkPath, FALSE);
-				if (SUCCEEDED(hr))
-					return true;
-				pPersistFile->Release();
-			}
-			pShellLink->Release();
-		}
-		CoUninitialize();
-	}
-	return false;
-}
-
-wstring deleteFile(wchar_t const* dst)
-{
-	try {
-		WIN32_FIND_DATAW p;
-		HANDLE h = FindFirstFileW(dst, &p);
-		if (h != INVALID_HANDLE_VALUE) {
-			FindClose(h);
-			bool result = DeleteFileW(dst);
-			if (!result)
-				return L"操作失败。";
-		}
-	}
-	catch (exception ex)
-	{
-		return L"操作异常";
-	}
-	return L"";
-}
-
-wstring copy_Files(wchar_t const* src, wchar_t const* dst)
-{
-	try {
-		bool result = CopyFileW(src, dst, false);  // 会覆盖源文件
-		if (!result)
-			return (wstring)L"安装失败";
-	}
-	catch (exception ex)
-	{
-		return L"安装异常";
-	}
-	return L"";
-}
-
-const char* toU8(const wchar_t* str, int len)
-{
-	char* pElementText;
-	int    iTextLen;
-	iTextLen = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
-	pElementText = (char*)malloc((iTextLen + 1) * sizeof(char));
-	if (pElementText == NULL)
-		return "";
-
-	memset(pElementText, 0, (iTextLen + 1) * sizeof(char));
-	WideCharToMultiByte(CP_UTF8, 0, str, -1, pElementText, iTextLen, NULL, NULL);
-
-	return pElementText;
 }

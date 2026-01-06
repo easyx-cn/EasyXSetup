@@ -24,12 +24,48 @@
     <ClInclude Include="easyxver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Page1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Page2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EGroups.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VSIDE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nuklearx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nuklear_easyx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MyWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Reg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nuklearx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Page1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nuklear_easyx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Page2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

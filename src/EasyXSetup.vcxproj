@@ -92,6 +92,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -151,13 +152,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
     <ClInclude Include="easyxver.h" />
+    <ClInclude Include="EGroups.h" />
+    <ClInclude Include="nuklearx.h" />
     <ClInclude Include="MyWindow.h" />
+    <ClInclude Include="nuklear_easyx.h" />
+    <ClInclude Include="Page1.h" />
+    <ClInclude Include="Page2.h" />
     <ClInclude Include="Reg.h" />
+    <ClInclude Include="VSIDE.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Common.cpp" />
     <ClCompile Include="MyWindow.cpp" />
+    <ClCompile Include="nuklear_easyx.cpp" />
+    <ClCompile Include="Page1.cpp" />
+    <ClCompile Include="Page2.cpp" />
     <ClCompile Include="Reg.cpp" />
+    <ClCompile Include="nuklearx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="app.manifest">
