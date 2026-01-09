@@ -7,12 +7,20 @@
 #include <regex>
 #include <tchar.h>
 #include <fstream>
-#include <list>
+#include <filesystem>
+
+#include <string>
+#include <iostream>
+#include <stdlib.h>
+
+#include <shlwapi.h>
+
 
 #include "Common.h"
 #include "egroups.h"
 #include "vside.h"
 #include "reg.h"
+
 using namespace std;
 
 #define MAX_KEY_LENGTH 255
@@ -64,5 +72,15 @@ public:
 	nk_style_button enableStyle();
 	nk_user_font* BoldFont(nk_style* style);
 
+	wstring OpenFolder();
+
 	void Draw(int& running, int& current_page);
+
+
+	wstring findFolder(wstring path, const wchar_t* folder);
+	wstring findFolder(wstring path, wregex rex);
+	wstring clVersion(wstring clpath);
+	wstring clVersion_2017(wstring p);
+	wstring AnalysisPath(wstring path, bool repeat = true);
+	filesystem::path safe_get_parent(const filesystem::path& filepath);
 };

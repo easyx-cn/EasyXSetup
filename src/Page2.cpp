@@ -1,5 +1,7 @@
 ﻿#include "page2.h"
 
+#pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "version.lib")
 
 EFiles* eFiles[] = {
 	new EFiles(L"include\\", L"easyx.h"),
@@ -253,11 +255,15 @@ void Page2::Draw(int& running, int& current_page)
 					nk_layout_space_push(_ctx, nk_rect(110.0f, 0.0f, 230.0f, 30.0f));
 					nk_label(_ctx, u8"(未检测到)", NK_TEXT_LEFT);
 
-					nk_layout_space_push(_ctx, nk_rect(Width - 135.0f, 0.0f, 45.0f, 30.0f));
-					nk_button_label_styled(_ctx, &button, u8"安装");
+					nk_layout_space_push(_ctx, nk_rect(Width - 135.0f, 0.0f, 100.0f, 30.0f));
+					if (nk_button_label_styled(_ctx, &btn, u8"选择安装目录"))
+					{
+						wstring path = OpenFolder();
+						if (!path.empty())
+						{
 
-					nk_layout_space_push(_ctx, nk_rect(Width - 85.0f, 0.0f, 45.0f, 30.0f));
-					nk_button_label_styled(_ctx, &button, u8"卸载");
+						}
+					}
 				}
 
 				i++;
@@ -542,4 +548,263 @@ wstring Page2::InstallHelp() {
 		return L"EasyX 文档安装失败。";
 
 	return L"";
+}
+
+wstring Page2::OpenFolder()
+{
+	Sleep(100);		// 必须等待鼠标弹起消息进入 nuklear，否则下次点击无效
+	wchar_t szPathName[MAX_PATH];
+	BROWSEINFO bInfo = { 0 };
+	bInfo.hwndOwner = GetForegroundWindow();
+	bInfo.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_UAHINT;
+	LPITEMIDLIST lpDlist;
+	lpDlist = SHBrowseForFolder(&bInfo);
+	if (lpDlist != NULL) {
+		SHGetPathFromIDListW(lpDlist, szPathName);
+		return szPathName;
+	}
+
+	return L"";
+}
+
+
+filesystem::path safe_get_parent(const filesystem::path& filepath) {
+	if (filepath.empty() || filepath == filepath.root_path()) {
+		return filepath;  // 已经是根目录，返回自身
+	}
+
+	filesystem::path parent = filepath.parent_path();
+	return parent.empty() ? filepath.root_path() : parent;
+}
+
+
+
+/// <summary>
+/// * 当前目录下存在 vc 文件夹，cl.exe 就在该路径内部
+/// * 当前目录下存在 vc 文件夹，但不是 cl.exe 的路径，没有找到cl.exe 继续查找父目录
+/// * 当前目录下是 Community|Professional|Enterprise 往下层目录检测 VC 文件夹是否存在
+/// * 当前目录下是 2017\2019\2022\18 文件夹，每次执行上一步流程三次，检测 Community|Professional|Enterprise 类型
+/// </summary>
+/// <param name="path"></param>
+/// <returns></returns>
+wstring AnalysisPath(wstring path, bool repeat)
+{
+	wstring p = path;
+	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
+		p += L"\\";
+
+	bool next = false;
+	wstring cl_ver = L"";
+	wstring ver_c = findFolder(p, L"VC");
+	if (ver_c != L"")
+	{
+		// 检测 2008-2015 的 cl.exe 路径
+		cl_ver = clVersion(ver_c + L"\\bin\\cl.exe");
+		if (cl_ver != L"")
+		{
+			x86lib_path = ver_c + L"\\lib\\";
+			x64lib_path = ver_c + L"\\lib\\amd64\\";
+			include_path = ver_c + L"\\include\\";
+		}
+		else
+			cl_ver = clVersion_2017(ver_c); // >= 2017 的版本
+
+		if (cl_ver != L"")
+			return cl_ver;
+
+		next = repeat;
+	}
+	else
+	{
+		ver_c = findFolder(p, L"VC98");
+		if (ver_c != L"")
+		{
+			cl_ver = clVersion(ver_c + L"\\bin\\cl.exe");
+			if (cl_ver != L"")
+			{
+				x86lib_path = ver_c + L"\\lib\\";
+				x64lib_path = ver_c + L"\\";
+				include_path = ver_c + L"\\include\\";
+				return cl_ver;
+			}
+		}
+
+		cl_ver = clVersion_2017(p + L"community\\vc");
+		if (cl_ver != L"")
+			return cl_ver;
+
+		cl_ver = clVersion_2017(p + L"professional\\vc");
+		if (cl_ver != L"")
+			return cl_ver;
+
+		cl_ver = clVersion_2017(p + L"enterprise\\vc");
+		if (cl_ver != L"")
+			return cl_ver;
+
+		// F:\\Program Files\\Microsoft Visual Studio 路劲后是 2017\2019\2022\2026 的情况
+		// 进入下一层目录，递归调用检测 community | professional | enterprise
+		ver_c = findFolder(p, L"2017");
+		if (ver_c != L"")
+			return AnalysisPath(p + L"2017", false);
+
+		ver_c = findFolder(p, L"2019");
+		if (ver_c != L"")
+			return AnalysisPath(p + L"2019", false);
+
+		ver_c = findFolder(p, L"2022");
+		if (ver_c != L"")
+			return AnalysisPath(p + L"2022", false);
+
+		ver_c = findFolder(p, L"18");
+		if (ver_c != L"")
+			return AnalysisPath(p + L"18", false);
+
+		// 默认 repeat = true，当使用 AnalysisPath 继续检测子目录时，不能进行循环，否则会进入死循环
+		next = repeat;
+	}
+
+	if (next)
+	{
+		filesystem::path pp = path.c_str();
+		filesystem::path pr = safe_get_parent(pp);
+
+		if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
+			return AnalysisPath(pr);
+	}
+
+	return L"";
+}
+
+wstring clVersion_2017(wstring p)
+{
+	wstring type = L"";
+	wstring cl_ver = L"";
+	wstring s_c = p + L"\\Tools\\MSVC\\";
+	/*wstring s_c = p + L"community\\VC\\Tools\\MSVC\\";
+	wstring s_p = p + L"professional\\VC\\Tools\\MSVC\\";
+	wstring s_e = p + L"enterprise\\VC\\Tools\\MSVC\\";*/
+
+	wregex rex(L"^\\d+\\.\\d+\\.\\d+$");    // 18.xx.xxxxx
+
+	// Community
+	wstring ver_c = findFolder(s_c, rex);
+	if (ver_c != L"")
+	{
+		cl_ver = clVersion(ver_c + L"\\bin\\Hostx86\\x86\\cl.exe");
+		/*   if (cl_ver != L"")
+			   type = L"Community";*/
+
+
+		if (cl_ver != L"")
+		{
+			x86lib_path = p + L"\\lib\\x86\\";
+			x64lib_path = p + L"\\lib\\x64\\";
+			include_path = p + L"\\Auxiliary\\VS\\include\\";
+			return cl_ver;
+		}
+	}
+
+	return L"";
+}
+
+wstring clVersion(wstring clpath)
+{
+	DWORD dummy;
+	DWORD size = GetFileVersionInfoSize(clpath.c_str(), &dummy);
+	std::vector<BYTE> versionBuffer(size);
+	if (!GetFileVersionInfo(clpath.c_str(), 0, size, versionBuffer.data())) {
+		return L"";
+	}
+
+	VS_FIXEDFILEINFO* fileInfo = nullptr;
+	UINT len = 0;
+	if (!VerQueryValue(versionBuffer.data(), L"\\", reinterpret_cast<LPVOID*>(&fileInfo), &len)) {
+		return L"";
+	}
+
+	// 构建版本字符串
+	DWORD major = HIWORD(fileInfo->dwFileVersionMS);
+	DWORD minor = LOWORD(fileInfo->dwFileVersionMS);
+	DWORD build = HIWORD(fileInfo->dwFileVersionLS);
+	DWORD revision = LOWORD(fileInfo->dwFileVersionLS);
+
+	std::wstring version = std::to_wstring(major) + L"." +
+		std::to_wstring(minor) + L"." +
+		std::to_wstring(build) + L"." +
+		std::to_wstring(revision);
+
+	return version;
+}
+
+
+/// <summary>
+/// 检测某个格式路径是否存在
+/// 如果存在返回绝对路径，末尾不加 \\
+/// </summary>
+/// <param name="path"></param>
+/// <param name="rex"></param>
+/// <returns></returns>
+wstring findFolder(wstring path, wregex rex)
+{
+	wstring searchPath = path + L"*";;
+	WIN32_FIND_DATAW findData;
+	HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
+
+	if (hFind == INVALID_HANDLE_VALUE)
+		return L"";
+
+	wstring result = L"";
+	do {
+		if (wcscmp(findData.cFileName, L".") == 0 ||
+			wcscmp(findData.cFileName, L"..") == 0) {
+			continue;
+		}
+
+		if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			wsmatch ms;
+			wstring fc = findData.cFileName;
+			bool r = regex_search(fc, ms, rex);
+			if (r)
+			{
+				result = path + fc;
+				break;
+			}
+		}
+	} while (FindNextFileW(hFind, &findData) != 0);
+	FindClose(hFind);
+
+	return result;
+}
+
+wstring findFolder(wstring path, const wchar_t* folder)
+{
+	wstring searchPath = path + L"*";;
+	WIN32_FIND_DATAW findData;
+	HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
+
+	if (hFind == INVALID_HANDLE_VALUE)
+		return L"";
+
+	wstring result = L"";
+	do {
+		// 跳过 "." 和 ".."
+		if (wcscmp(findData.cFileName, L".") == 0 ||
+			wcscmp(findData.cFileName, L"..") == 0) {
+			continue;
+		}
+
+		// 检查是否是 folder 目录
+		if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			if (_wcsicmp(findData.cFileName, folder) == 0)
+			{
+				result = path + folder;
+				break;
+			}
+		}
+	} while (FindNextFileW(hFind, &findData) != 0);
+	FindClose(hFind);
+
+	return result;
 }
