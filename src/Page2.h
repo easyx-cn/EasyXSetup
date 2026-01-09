@@ -5,19 +5,25 @@
 #include <Shlobj.h>
 #include <direct.h>
 #include <regex>
-#include <tchar.h>
 #include <fstream>
-#include <list>
+#include <filesystem>
+#include <string>
+#include <stdlib.h>
 
 #include "Common.h"
 #include "egroups.h"
 #include "vside.h"
 #include "reg.h"
+
 using namespace std;
 
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 #define VSNUM 10
+
+#define NOTFOUND 0		// 当前目录没有需要的信息，需要继续查找
+#define ERROR_1	-1		// 定义为用户选择了与当前vs版本不符的安装目录
+#define ERROR_SYSTEM -2
 
 
 class Page2
@@ -64,5 +70,15 @@ public:
 	nk_style_button enableStyle();
 	nk_user_font* BoldFont(nk_style* style);
 
+	wstring OpenFolder();
+
 	void Draw(int& running, int& current_page);
+
+	int toVer(DWORD);
+	wstring findFolder(wstring path, const wchar_t* folder);
+	wstring findFolder(wstring path, wregex rex);
+	int clVersion(wstring clpath);
+	int clVersion_2017(wstring p, int id);
+	int AnalysisPath(wstring path, int id, bool repeat = true);
+	filesystem::path safe_get_parent(const filesystem::path& filepath);
 };
