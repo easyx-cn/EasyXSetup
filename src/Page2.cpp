@@ -101,6 +101,8 @@ void Page2::InitIDE()
 	if (amd != L"" && wcscmp(amd.c_str(), L"AMD64") == 0)
 		g_bX64 = true;
 
+	FindCLion(L"", g_bX64);
+
 	for (int i = 0; i < VSNUM; i++)
 	{
 		int v = eGroups[i]->ver;
@@ -109,7 +111,7 @@ void Page2::InitIDE()
 
 		if (vcpath == L"")
 		{
-			VSIDE* item = new VSIDE(name.c_str(), L"", L"", i, false);
+			VSIDE* item = new VSIDE(name.c_str(), L"", L"", i, false, VISUAL_STUDIO);
 			not_exist_list.push_back(item);
 			continue;
 		}
@@ -121,7 +123,7 @@ void Page2::InitIDE()
 			eGroups[i]->vcpath = L"";
 			eGroups[i]->path_h = L"";
 
-			VSIDE* item = new VSIDE(name.c_str(), L"", L"", i, false);
+			VSIDE* item = new VSIDE(name.c_str(), L"", L"", i, false, VISUAL_STUDIO);
 			not_exist_list.push_back(item);
 			continue;
 		}
@@ -132,7 +134,7 @@ void Page2::InitIDE()
 			eGroups[i]->path_h = L"";
 			eGroups[i]->path_libx86 = L"";
 
-			VSIDE* item = new VSIDE(name.c_str(), L"", L"", i, false);
+			VSIDE* item = new VSIDE(name.c_str(), L"", L"", i, false, VISUAL_STUDIO);
 			not_exist_list.push_back(item);
 			continue;
 		}
@@ -148,7 +150,7 @@ void Page2::InitIDE()
 		if (eGroups[i]->path_libx64 != L"") {
 			path2 += L" " + eGroups[i]->vcpath + eGroups[i]->path_libx64;
 		}
-		VSIDE* item = new VSIDE(name.c_str(), path1.c_str(), path2.c_str(), i, true);
+		VSIDE* item = new VSIDE(name.c_str(), path1.c_str(), path2.c_str(), i, true, VISUAL_STUDIO);
 		exist_list.push_back(item);
 	}
 
@@ -941,15 +943,31 @@ void Page2::check_mingw(EMingWGroups* ep)
 /// 
 /// </summary>
 /// <param name="path"></param>
-int Page2::FindCLion(wstring path, int id, bool repeat)
+int Page2::FindCLion(wstring path, bool g_bX64)
 {
-	EMingWGroups* ep = mingw_Groups[id];
+	// 没有指定路径就查找注册表
+	if (path == L"")
+	{
+		wstring p = reg.GetMingWPath(mingw_Groups[CLION]->identity, g_bX64);
+		if (p != L"")
+		{
+			mingw_Groups[CLION]->mingw_path = p.c_str();
+			VSIDE* item = new VSIDE(mingw_Groups[CLION]->name.c_str(), L"", L"", CLION, true, MINGW);
+			exist_list.push_back(item);
+			return CLION;
+		}
+
+		VSIDE* item = new VSIDE(mingw_Groups[CLION]->name.c_str(), L"", L"", CLION, false, MINGW);
+		not_exist_list.push_back(item);
+		return NOTFOUND;
+	}
+
+	EMingWGroups* ep = mingw_Groups[CLION];
 	wstring p = path;
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
 		p += L"\\";
 
 	bool next = false;
-	DWORD cl_ver = NOTFOUND;
 	wstring bin_folder = findFolder(p, L"bin");
 	if (bin_folder != L"")
 	{
@@ -981,9 +999,6 @@ int Page2::FindCLion(wstring path, int id, bool repeat)
 
 			return CLION;
 		}
-
-		if (cl_ver != NOTFOUND)
-			return cl_ver;
 
 		next = repeat;
 	}

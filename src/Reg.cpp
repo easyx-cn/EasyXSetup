@@ -150,6 +150,93 @@ wstring Reg::RegRead(HKEY defkey, wchar_t const* subkeyname, wchar_t const* key)
 	return str;
 }
 
+wstring Reg::GetMingWPath(int identity, bool g_bX64)
+{
+	HKEY hKey = HKEY_LOCAL_MACHINE;
+	wchar_t const* path = NULL;
+	wchar_t const* subkeyname = NULL;
+	wchar_t const* key = NULL;
+
+	switch (identity)
+	{
+	case DEVCPP:
+		{
+			hKey = HKEY_LOCAL_MACHINE;
+			if (g_bX64)
+				subkeyname = L"Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+			else
+				subkeyname = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+
+			int numKeys;
+			int len = lstrlenW(subkeyname);
+			wchar_t** aNames = RegEnumKeys(hKey, subkeyname, &numKeys);
+			for (int i = 0; i < numKeys; i++)
+			{
+				int buf_len = len + 1 + lstrlenW(aNames[i]) + 1;
+				wchar_t* buf = new wchar_t[buf_len];
+				_snwprintf_s(buf, buf_len, buf_len, L"%s%s%s", subkeyname, L"\\", aNames[i]);
+				buf[buf_len - 1] = L'\0';
+
+				wstring rtn = RegRead(hKey, buf, L"DisplayName");
+				if (rtn != L"")
+				{
+					wregex rex(L"^.*?dev-c.*?$", regex_constants::icase);  //   \\( 代替原来的 \(      匹配括号
+					bool result = regex_search(rtn, rex);
+					if (result)
+					{
+						subkeyname = buf;
+						key = L"UninstallString";
+						wstring p = RegRead(hKey, subkeyname, key);
+						wstring localPath = p.substr(0, p.find_last_of(L'\\') + 1);
+						return localPath;
+					}
+				}
+			}
+			break;
+		}
+	case CLION:
+	{
+		hKey = HKEY_LOCAL_MACHINE;
+		if (g_bX64)
+			subkeyname = L"Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+		else
+			subkeyname = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+
+		int numKeys;
+		int len = lstrlenW(subkeyname);
+		wchar_t** aNames = RegEnumKeys(hKey, subkeyname, &numKeys);
+		for (int i = 0; i < numKeys; i++)
+		{
+			int buf_len = len + 1 + lstrlenW(aNames[i]) + 1;
+			wchar_t* buf = new wchar_t[buf_len];
+			_snwprintf_s(buf, buf_len, buf_len, L"%s%s%s", subkeyname, L"\\", aNames[i]);
+			buf[buf_len - 1] = L'\0';
+
+			wstring rtn = RegRead(hKey, buf, L"DisplayName");
+			if (rtn != L"")
+			{
+				wregex rex(L"^.*?clion.*?$", regex_constants::icase);  //   \\( 代替原来的 \(      匹配括号
+				bool result = regex_search(rtn, rex);
+				if (result)
+				{
+					subkeyname = buf;
+					key = L"InstallLocation";
+					wstring localPath = RegRead(hKey, subkeyname, key);
+					return localPath;
+				}
+			}
+		}
+		break;
+	}
+	case CODEBLOCKS:
+		break;
+	default:
+		break;
+	}
+
+	return L"";
+}
+
 wstring Reg::GetVCPath(int iVsVer, bool g_bX64)
 {
 	HKEY hKey = HKEY_LOCAL_MACHINE;

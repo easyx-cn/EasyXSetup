@@ -14,8 +14,9 @@ public:
 	bool installed;		// 是否安装成功
 	string msg;
 	bool exist;
+	BYTE type;			// 是 【0】vs 还是 【1】devcpp...其它
 
-	VSIDE(wstring n, wstring p1, wstring p2, int i, bool e) {
+	VSIDE(wstring n, wstring p1, wstring p2, int i, bool e, BYTE t) {
 		name = n;
 		path_1 = p1;
 		path_2 = p2;
@@ -23,6 +24,7 @@ public:
 		checked = false;
 		installed = false;
 		exist = e;
+		type = t;
 	}
 	~VSIDE() {}
 };

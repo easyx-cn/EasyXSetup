@@ -26,6 +26,8 @@ using namespace std;
 #define ERROR_1	-1		// 定义为用户选择了与当前vs版本不符的安装目录
 #define ERROR_SYSTEM -2
 
+#define VISUAL_STUDIO	0
+#define MINGW			1
 
 class Page2
 {
@@ -85,7 +87,7 @@ public:
 	filesystem::path safe_get_parent(const filesystem::path& filepath);
 	void check(EGroups* ep);
 
-	int FindCLion(wstring path, int id, bool repeat = true);
+	int FindCLion(wstring path, bool g_bX64);
 	bool findCLion_exe(wstring);
 	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
