@@ -53,18 +53,12 @@ wchar_t** Reg::RegEnumKeys(HKEY defkey, wchar_t const* subkeyname, int* numkeys)
 			cbNameLength = MAX_KEY_LENGTH;
 			retCode = RegEnumKeyExW(hKey, i, achKey, &cbNameLength, NULL, NULL, NULL, &ftLastWriteTime);
 
-			if (cSubKeys == i + 1)
-			{
-				int i = 0;
-			}
 			if (retCode == ERROR_SUCCESS)
 			{
 				list[i] = new wchar_t[cbNameLength + 1];
 				wcscpy_s(list[i], cbNameLength + 1, achKey);
 			}
 		}
-
-		int s[2] = { 2, 4 };
 	}
 
 	RegCloseKey(hKey);        // 程序结束前要关闭已经打开的 hKEY。
@@ -406,34 +400,46 @@ wchar_t const* Reg::GetIncludePath(int iVsVer) {
 }
 
 wchar_t const* Reg::GetLibX86Path(int iVcVer) {
-	switch (iVcVer) {
-	case 6:     return L"Lib\\";
-	case 2008:
-	case 2010:
-	case 2012:
-	case 2013:
-	case 2015: return L"lib\\";
-	case 2017:
-	case 2019:
-	case 2022:
-	case 2026: return L"lib\\x86\\";
+	switch (iVcVer)
+	{
+		case 6:     return L"Lib\\";
+		case 2008:
+		case 2010:
+		case 2012:
+		case 2013:
+		case 2015: return L"lib\\";
+		case 2017:
+		case 2019:
+		case 2022:
+		case 2026: return L"lib\\x86\\";
+
+		case DEVCPP:		return L"";
+		case CODEBLOCKS:	return L"";
+		case CLION:			return L"";
+		case VSCODE:		return L"";
 	}
 
 	return L"";
 }
 
 wchar_t const* Reg::GetLibX64Path(int iVcVer) {
-	switch (iVcVer) {
-	case 6:     return L"";
-	case 2008:
-	case 2010:
-	case 2012:
-	case 2013:
-	case 2015: return L"lib\\amd64\\";
-	case 2017:
-	case 2019:
-	case 2022:
-	case 2026: return L"lib\\x64\\";
+	switch (iVcVer)
+	{
+		case 6:     return L"";
+		case 2008:
+		case 2010:
+		case 2012:
+		case 2013:
+		case 2015: return L"lib\\amd64\\";
+		case 2017:
+		case 2019:
+		case 2022:
+		case 2026: return L"lib\\x64\\";
+
+		case DEVCPP:		return L"";
+		case CODEBLOCKS:	return L"";
+		case CLION:			return L"";
+		case VSCODE:		return L"";
 	}
 	return L"";
 }

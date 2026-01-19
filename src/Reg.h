@@ -7,6 +7,13 @@ using namespace std;
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 
+
+#define DEVCPP		100
+#define CODEBLOCKS	101
+#define CLION		102
+#define VSCODE		103
+#define OTHER_IDE	104
+
 class Reg
 {
 public:

@@ -31,6 +31,28 @@ public:
 };
 
 
+class EMingWGroups
+{
+public:
+	wstring name;
+	int identity;
+	wstring mingw_path;		// x86_64-w64-mingw32\\     i686-w64-mingw32\\ 路径
+	wstring path_h;			// 固定位 include \\。
+	wstring path_lib;		// 固定为 lib\\。
+	int w64_32;				// 32 或 64 位
+
+	EMingWGroups(wstring n, int id)
+	{
+		name = n;
+		identity = id;
+		path_h = L"include\\";
+		path_lib = L"lib\\";
+	}
+
+	~EMingWGroups() {}
+};
+
+
 
 class EFiles
 {

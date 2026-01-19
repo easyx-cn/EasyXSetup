@@ -20,6 +20,7 @@ using namespace std;
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 #define VSNUM 10
+#define MINGW_SNUM 5
 
 #define NOTFOUND 0		// 当前目录没有需要的信息，需要继续查找
 #define ERROR_1	-1		// 定义为用户选择了与当前vs版本不符的安装目录
@@ -38,6 +39,7 @@ class Page2
 
 	bool popup_active = false;
 	EGroups* eGroups[VSNUM];
+	EMingWGroups* mingw_Groups[MINGW_SNUM];
 
 	Reg reg;
 
@@ -81,4 +83,11 @@ public:
 	int clVersion_2017(wstring p, int id);
 	int AnalysisPath(wstring path, int id, bool repeat = true);
 	filesystem::path safe_get_parent(const filesystem::path& filepath);
+	void check(EGroups* ep);
+
+	int FindCLion(wstring path, int id, bool repeat = true);
+	bool findCLion_exe(wstring);
+	void findCLion_mingw(wstring path);
+	void check_mingw(EMingWGroups* ep);
+	wstring ReadProcessOutput(const wstring& command);
 };

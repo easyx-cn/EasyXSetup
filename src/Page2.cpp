@@ -15,7 +15,17 @@ EFiles* eFiles[] = {
 	new EFiles(L"lib\\VC2015\\x86\\", L"EasyXa.lib"),
 	new EFiles(L"lib\\VC2015\\x86\\", L"EasyXw.lib"),
 	new EFiles(L"lib\\VC2015\\x64\\", L"EasyXa.lib"),
-	new EFiles(L"lib\\VC2015\\x64\\", L"EasyXw.lib"),
+	new EFiles(L"lib\\VC2015\\x64\\", L"EasyXw.lib")
+};
+
+EFiles* mingw_eFiles[] = {
+	new EFiles(L"include\\", L"easyx.h"),
+	new EFiles(L"include\\", L"graphics.h"),
+	new EFiles(L"lib32\\", L"libeasyx.a"),
+	new EFiles(L"lib32\\", L"libeasyxw.a"),
+	new EFiles(L"lib64\\", L"libeasyx.a"),
+	new EFiles(L"lib64\\", L"libeasyxw.a"),
+	new EFiles(L"lib-for-devcpp_5.4.0\\", L"libeasyx.a")
 };
 
 Page2::Page2(nk_context* ctx, int w, int h)
@@ -73,6 +83,12 @@ void Page2::InitIDE()
 	eGroups[7] = new EGroups(L"  Visual C++ 2019", 2019, L"", L"", L"", L"", a, b3, b5);
 	eGroups[8] = new EGroups(L"  Visual C++ 2022", 2022, L"", L"", L"", L"", a, b3, b5);
 	eGroups[9] = new EGroups(L"  Visual C++ 2026", 2026, L"", L"", L"", L"", a, b3, b5);
+
+	mingw_Groups[0] = new EMingWGroups(L"  DevCpp", DEVCPP);
+	mingw_Groups[1] = new EMingWGroups(L"  CodeBlocks", CODEBLOCKS);
+	mingw_Groups[2] = new EMingWGroups(L"  CLion", CLION);
+	mingw_Groups[3] = new EMingWGroups(L"  VSCode", VSCODE);
+	mingw_Groups[4] = new EMingWGroups(L"  其他基于MingW的IDE", OTHER_IDE);
 
 	wstring path = L"桌面路径 ";
 	path += g_pathDesktop();
@@ -629,7 +645,7 @@ int Page2::toVer(DWORD cl_ver)
 	return NOTFOUND;
 }
 
-void check(EGroups* ep)
+void Page2::check(EGroups* ep)
 {
 	if (_waccess((ep->vcpath + ep->path_h).c_str(), 0) != 0) {
 		ep->vcpath = L"";
@@ -646,6 +662,7 @@ void check(EGroups* ep)
 		ep->path_libx64 = L"";
 	}
 }
+
 /// <summary>
 /// * 当前目录下存在 vc 文件夹，cl.exe 就在该路径内部
 /// * 当前目录下存在 vc 文件夹，但不是 cl.exe 的路径，没有找到cl.exe 继续查找父目录
@@ -773,7 +790,7 @@ int Page2::clVersion_2017(wstring p, int id)
 	wstring type = L"";
 	DWORD cl_ver = NOTFOUND;
 	wstring s_c = p + L"Tools\\MSVC\\";
-	wregex rex(L"^\\d+\\.\\d+\\.\\d+$");    // 18.xx.xxxxx
+	wregex rex(L"^\\d+\\.\\d+\\.\\d+$", regex_constants::icase);    // 18.xx.xxxxx
 
 	wstring ver_c = findFolder(s_c, rex);
 	if (ver_c != L"")
@@ -902,4 +919,202 @@ wstring Page2::findFolder(wstring path, const wchar_t* folder)
 	FindClose(hFind);
 
 	return result;
+}
+
+
+
+void Page2::check_mingw(EMingWGroups* ep)
+{
+	if (_waccess((ep->mingw_path + ep->path_h).c_str(), 0) != 0) {
+		ep->mingw_path = L"";
+		ep->path_h = L"";
+	}
+
+	if (_waccess((ep->mingw_path + ep->path_lib).c_str(), 0) != 0) {
+		ep->mingw_path = L"";
+		ep->path_lib = L"";
+	}
+}
+
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="path"></param>
+int Page2::FindCLion(wstring path, int id, bool repeat)
+{
+	EMingWGroups* ep = mingw_Groups[id];
+	wstring p = path;
+	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
+		p += L"\\";
+
+	bool next = false;
+	DWORD cl_ver = NOTFOUND;
+	wstring bin_folder = findFolder(p, L"bin");
+	if (bin_folder != L"")
+	{
+		if (findCLion_exe(bin_folder) == false)
+			return NOTFOUND;
+
+		// 是否存在 \\bin\\**mingw** 文件夹
+		wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
+		wstring mingw_folder = findFolder(bin_folder, rex);
+		if (mingw_folder != L"")
+		{
+			wstring mingw_install_path;
+			mingw_install_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
+
+			if (mingw_install_path != L"")
+			{
+				ep->w64_32 = 64;
+			}
+			else
+			{
+				mingw_install_path = findFolder(mingw_folder, L"i686-w64-mingw32");		// 32 位
+				ep->w64_32 = 32;
+			}
+			if (mingw_install_path == L"")
+				return NOTFOUND;
+
+			ep->mingw_path = mingw_install_path;
+			check_mingw(ep);
+
+			return CLION;
+		}
+
+		if (cl_ver != NOTFOUND)
+			return cl_ver;
+
+		next = repeat;
+	}
+
+	if (next)
+	{
+		filesystem::path pp = path.c_str();
+		filesystem::path pr = safe_get_parent(pp);
+
+		if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
+			return FindCLion(pr, id);
+	}
+
+	return NOTFOUND;
+}
+
+/// <summary>
+/// 检测是否存在 clion**.exe
+/// </summary>
+/// <param name="path"></param>
+bool Page2::findCLion_exe(wstring path)
+{
+	wstring searchPath = path + L"*";;
+	WIN32_FIND_DATAW findData;
+	HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
+
+	if (hFind == INVALID_HANDLE_VALUE)
+		return L"";
+
+	wsmatch ms;
+	wstring result = L"";
+	wregex rex(L"^clion.*?\\.exe$", regex_constants::icase);
+	do {
+		// 跳过 "." 和 ".."
+		if (wcscmp(findData.cFileName, L".") == 0 ||
+			wcscmp(findData.cFileName, L"..") == 0) {
+			continue;
+		}
+
+		wstring fc = findData.cFileName;
+		bool r = regex_search(fc, ms, rex);
+		if (r)
+			return true;
+	} while (FindNextFileW(hFind, &findData) != 0);
+	FindClose(hFind);
+
+	return false;
+}
+
+// 查找 \bin\*mingw*\ 路径
+// \bin\*mingw*\bin\gcc.exe 检测 mignw 是 32、64 位？
+void Page2::findCLion_mingw(wstring path)
+{
+	// 不用检测，直接更具文件夹名称判断 x86_64-w64-mingw32   i686-w64-mingw32
+}
+
+
+/// <summary>
+/// 传入参数： F:\\xxx\\..\\gcc.exe -v  获取mingw 版本，路径有空格需要加双引号
+/// </summary>
+/// <param name="command"></param>
+/// <returns></returns>
+wstring Page2::ReadProcessOutput(const wstring& command)
+{
+	SECURITY_ATTRIBUTES sa;
+	HANDLE hReadPipe, hWritePipe;
+	PROCESS_INFORMATION pi;
+	STARTUPINFOW si;
+
+	// 设置安全属性
+	sa.nLength = sizeof(sa);
+	sa.lpSecurityDescriptor = NULL;
+	sa.bInheritHandle = TRUE;
+
+	// 创建管道
+	if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) {
+		return L"创建管道失败";
+	}
+
+	// 确保读句柄不被继承
+	SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
+
+	// 设置进程启动信息
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	si.hStdError = hWritePipe;
+	si.hStdOutput = hWritePipe;
+	si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+	si.dwFlags = STARTF_USESTDHANDLES;
+	ZeroMemory(&pi, sizeof(pi));
+
+	// 准备命令行（必须可写）
+	wstring cmd = L"cmd.exe /c " + command;
+	wchar_t* cmdLine = new wchar_t[cmd.length() + 1];
+	wcscpy(cmdLine, cmd.c_str());
+
+	// 创建进程
+	if (!CreateProcessW(NULL, cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+	{
+		delete[] cmdLine;
+		CloseHandle(hReadPipe);
+		CloseHandle(hWritePipe);
+		return L"创建进程失败: " + to_wstring(GetLastError());
+	}
+
+	delete[] cmdLine;
+	CloseHandle(hWritePipe);  // 在子进程中已继承，这里关闭
+
+	// 读取输出
+	wstring output;
+	DWORD bytesRead;
+	wchar_t buffer[4096];
+	BOOL success = FALSE;
+
+	while (true)
+	{
+		success = ReadFile(hReadPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL);
+		if (!success || bytesRead == 0)
+			break;
+
+		buffer[bytesRead] = L'\0';
+		output += buffer;
+	}
+
+	// 等待进程结束
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	// 清理
+	CloseHandle(hReadPipe);
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+
+	return output;
 }
