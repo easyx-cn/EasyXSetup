@@ -36,10 +36,11 @@ class EMingWGroups
 public:
 	wstring name;
 	int identity;
-	wstring mingw_path;		// x86_64-w64-mingw32\\     i686-w64-mingw32\\ 路径
-	wstring path_h;			// 固定位 include \\。
-	wstring path_lib;		// 固定为 lib\\。
-	int w64_32;				// 32 或 64 位
+	wstring mingw_path;					// x86_64-w64-mingw32\\     i686-w64-mingw32\\ 路径
+	wstring path_h;						// 固定位 include \\。
+	wstring path_lib32, path_lib;		// devcpp 存在 lib32\\ 文件夹
+	int w64_32;							// 32 或 64 位
+	int version;
 
 	EMingWGroups(wstring n, int id)
 	{
@@ -47,6 +48,7 @@ public:
 		identity = id;
 		path_h = L"include\\";
 		path_lib = L"lib\\";
+		path_lib32 = L"lib32\\";
 	}
 
 	~EMingWGroups() {}

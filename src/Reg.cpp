@@ -152,6 +152,7 @@ wstring Reg::RegRead(HKEY defkey, wchar_t const* subkeyname, wchar_t const* key)
 
 wstring Reg::GetMingWPath(int identity, bool g_bX64)
 {
+	wstring localPath = L"";
 	HKEY hKey = HKEY_LOCAL_MACHINE;
 	wchar_t const* path = NULL;
 	wchar_t const* subkeyname = NULL;
@@ -187,8 +188,8 @@ wstring Reg::GetMingWPath(int identity, bool g_bX64)
 						subkeyname = buf;
 						key = L"UninstallString";
 						wstring p = RegRead(hKey, subkeyname, key);
-						wstring localPath = p.substr(0, p.find_last_of(L'\\') + 1);
-						return localPath;
+						localPath = p.substr(0, p.find_last_of(L'\\') + 1);
+						break;
 					}
 				}
 			}
@@ -221,8 +222,8 @@ wstring Reg::GetMingWPath(int identity, bool g_bX64)
 				{
 					subkeyname = buf;
 					key = L"InstallLocation";
-					wstring localPath = RegRead(hKey, subkeyname, key);
-					return localPath;
+					localPath = RegRead(hKey, subkeyname, key);
+					break
 				}
 			}
 		}
@@ -234,7 +235,19 @@ wstring Reg::GetMingWPath(int identity, bool g_bX64)
 		break;
 	}
 
-	return L"";
+	if (localPath != L"") {
+		DWORD dir = GetFileAttributesW(localPath.c_str());
+		if (dir != FILE_ATTRIBUTE_DIRECTORY)
+			localPath = L"";
+	}
+
+	if (localPath != L"") {
+		int len = lstrlenW(localPath.c_str());
+		if (localPath[len - 1] != L'\\')
+			localPath = localPath + L"\\";
+	}
+
+	return localPath;
 }
 
 wstring Reg::GetVCPath(int iVsVer, bool g_bX64)

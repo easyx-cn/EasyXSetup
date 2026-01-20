@@ -60,6 +60,7 @@ public:
 
 	void UninstallOldEasyX(int id);
 	wstring Install(int id);
+	wstring Install_mingw(int id);
 	wstring UninstallHelp();
 	wstring Uninstall(int id);
 	wstring InstallHelp();
@@ -88,7 +89,8 @@ public:
 	void check(EGroups* ep);
 
 	int FindCLion(wstring path, bool g_bX64);
-	bool findCLion_exe(wstring);
+	int FindDevCpp(wstring path, bool g_bX64);
+	bool find_exe(wstring, wregex);
 	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
 	wstring ReadProcessOutput(const wstring& command);

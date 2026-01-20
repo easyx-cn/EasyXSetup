@@ -18,15 +18,6 @@ EFiles* eFiles[] = {
 	new EFiles(L"lib\\VC2015\\x64\\", L"EasyXw.lib")
 };
 
-EFiles* mingw_eFiles[] = {
-	new EFiles(L"include\\", L"easyx.h"),
-	new EFiles(L"include\\", L"graphics.h"),
-	new EFiles(L"lib32\\", L"libeasyx.a"),
-	new EFiles(L"lib32\\", L"libeasyxw.a"),
-	new EFiles(L"lib64\\", L"libeasyx.a"),
-	new EFiles(L"lib64\\", L"libeasyxw.a"),
-	new EFiles(L"lib-for-devcpp_5.4.0\\", L"libeasyx.a")
-};
 
 Page2::Page2(nk_context* ctx, int w, int h)
 {
@@ -92,7 +83,7 @@ void Page2::InitIDE()
 
 	wstring path = L"桌面路径 ";
 	path += g_pathDesktop();
-	VSIDE* d = new VSIDE(L"  EasyX 文档", L"在线文档 https://docs.easyx.cn", path.c_str(), -1, true);
+	VSIDE* d = new VSIDE(L"  EasyX 文档", L"在线文档 https://docs.easyx.cn", path.c_str(), -1, true, VISUAL_STUDIO);
 	ide_list.push_back(d);
 
 	bool g_bX64 = false;
@@ -244,8 +235,10 @@ void Page2::Draw(int& running, int& current_page)
 						wstring s;
 						if ((*itor)->id == -1)
 							s = InstallHelp();
-						else
+						else if ((*itor)->type == VISUAL_STUDIO)
 							s = Install((*itor)->id);
+						else
+							s = Install_mingw((*itor)->id);
 
 						if (s.size() == 0)
 							popup_msg = L"安装成功";
@@ -492,9 +485,6 @@ wstring Page2::Install(int id)
 	wstring err = L"";
 	if (eGroups[id]->files_h != NULL) {
 		for (int i = 0; i < 2; i++) {
-			int d = eGroups[id]->files_h[i];
-			EFiles* dd = eFiles[d];
-
 			wstring src = eFiles[eGroups[id]->files_h[i]]->path + eFiles[eGroups[id]->files_h[i]]->name;
 			wstring dst = eGroups[id]->vcpath + eGroups[id]->path_h + eFiles[eGroups[id]->files_h[i]]->name;
 			err += copy_Files((strExeName + src).c_str(), dst.c_str());
@@ -520,6 +510,95 @@ wstring Page2::Install(int id)
 			if (err != L"")
 				return L"安装失败";
 		}
+	}
+
+	return err;
+}
+
+wstring Page2::Install_mingw(int id)
+{
+	wchar_t exeFullPath[MAX_PATH];
+	GetModuleFileNameW(NULL, exeFullPath, MAX_PATH);
+	wstring strFullPath = exeFullPath;
+	size_t nStart = strFullPath.find_last_of(L"\\");
+	wstring strExeName = strFullPath.substr(0, nStart + 1);
+
+	//switch (id)
+	//{
+	//case DEVCPP:
+	//{
+	//	if (mingw_Groups[id]->version != 54)		// 5.4.xxx版本
+	//	{
+
+	//	}
+	//	else
+	//	{
+
+	//	}
+	//	break;
+	//}
+
+	//case CLION:
+	//case CODEBLOCKS:
+	//case OTHER_IDE:
+	//	break;
+	//}
+
+
+	EFiles* mingw_eFiles[] = {
+		new EFiles(L"include\\", L"easyx.h"),
+		new EFiles(L"include\\", L"graphics.h"),
+		new EFiles(L"lib32\\libeasyx.a", L""),
+		new EFiles(L"lib32\\libeasyxw.a", L""),
+		new EFiles(L"lib64\\libeasyx.a", L""),
+		new EFiles(L"lib64\\libeasyxw.a", L""),
+		new EFiles(L"lib-for-devcpp_5.4.0\\", L"libeasyx.a")
+	};
+
+	wstring src_lib, src_libw;
+	wstring dest_lib = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib + L"libeasyx.a";
+	wstring dest_libw = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib + L"libeasyxw.a";
+	if (mingw_Groups[id]->w64_32 == 32)
+	{
+		src_lib = strExeName + L"lib32\\libeasyx.a";
+		src_libw = strExeName + L"lib32\\libeasyxw.a";
+	}
+	else
+	{
+		src_lib = strExeName + L"lib64\\libeasyx.a";
+		src_libw = strExeName + L"lib64\\libeasyxw.a";
+	}
+
+	wstring err = L"";
+	if (mingw_Groups[id]->path_h != L"")
+	{
+		wstring src = strExeName + L"include\\easyx.h";
+		wstring dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"easyx.h";
+		err += copy_Files(src.c_str(), dst.c_str());
+		
+		src = strExeName + L"include\\graphics.h";
+		dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"graphics.h";
+		err += copy_Files(src.c_str(), dst.c_str());
+
+		if (err != L"")
+			return L"安装失败";
+	}
+
+	if (mingw_Groups[id]->path_lib != L"")
+	{
+		wstring dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib + L"libeasyx.a";
+		err += copy_Files(src_lib.c_str(), dst.c_str());
+
+		dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib + L"libeasyxw.a";
+		err += copy_Files(src_libw.c_str(), dst.c_str());
+		if (err != L"")
+			return L"安装失败";
+	}
+
+	// 针对 devcpp5.4 的安装
+	if (mingw_Groups[id]->path_lib32 != L"")
+	{
+		l
 	}
 
 	return err;
@@ -696,7 +775,7 @@ int Page2::AnalysisPath(wstring path, int id, bool repeat)
 	if (ver_c != L"")
 	{
 		// 检测 2008-2015 的 cl.exe 路径
-		cl_ver = clVersion(ver_c + L"bin\\cl.exe");
+		cl_ver = exeVersion(ver_c + L"bin\\cl.exe");
 		if (cl_ver != NOTFOUND)
 		{
 			if (cl_ver != ep->ver)	
@@ -722,7 +801,7 @@ int Page2::AnalysisPath(wstring path, int id, bool repeat)
 		ver_c = findFolder(p, L"VC98");
 		if (ver_c != L"")
 		{
-			cl_ver = clVersion(ver_c + L"bin\\cl.exe");
+			cl_ver = exeVersion(ver_c + L"bin\\cl.exe");
 			if (cl_ver != NOTFOUND)
 			{
 				EGroups* ep = eGroups[id];
@@ -797,7 +876,7 @@ int Page2::clVersion_2017(wstring p, int id)
 	wstring ver_c = findFolder(s_c, rex);
 	if (ver_c != L"")
 	{
-		cl_ver = clVersion(ver_c + L"bin\\Hostx86\\x86\\cl.exe");
+		cl_ver = exeVersion(ver_c + L"bin\\Hostx86\\x86\\cl.exe");
 		if (cl_ver != NOTFOUND)
 		{
 			EGroups* ep = eGroups[id];
@@ -821,7 +900,7 @@ int Page2::clVersion_2017(wstring p, int id)
 /// </summary>
 /// <param name="clpath"></param>
 /// <returns></returns>
-int Page2::clVersion(wstring clpath)
+int Page2::exeVersion(wstring clpath)
 {
 	DWORD dummy;
 	DWORD size = GetFileVersionInfoSize(clpath.c_str(), &dummy);
@@ -936,6 +1015,11 @@ void Page2::check_mingw(EMingWGroups* ep)
 		ep->mingw_path = L"";
 		ep->path_lib = L"";
 	}
+
+	if (_waccess((ep->mingw_path + ep->path_lib32).c_str(), 0) != 0) {
+		ep->mingw_path = L"";
+		ep->path_lib32 = L"";
+	}
 }
 
 
@@ -948,7 +1032,7 @@ int Page2::FindCLion(wstring path, bool g_bX64)
 	// 没有指定路径就查找注册表
 	if (path == L"")
 	{
-		wstring p = reg.GetMingWPath(mingw_Groups[CLION]->identity, g_bX64);
+		wstring p = reg.GetMingWPath(CLION, g_bX64);
 		if (p != L"")
 		{
 			mingw_Groups[CLION]->mingw_path = p.c_str();
@@ -962,6 +1046,8 @@ int Page2::FindCLion(wstring path, bool g_bX64)
 		return NOTFOUND;
 	}
 
+	///////////////////////////////////////////////////////
+	/////////////// 手动指定路径查找
 	EMingWGroups* ep = mingw_Groups[CLION];
 	wstring p = path;
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
@@ -971,7 +1057,8 @@ int Page2::FindCLion(wstring path, bool g_bX64)
 	wstring bin_folder = findFolder(p, L"bin");
 	if (bin_folder != L"")
 	{
-		if (findCLion_exe(bin_folder) == false)
+		wregex rex(L"^.*?clion.*?\\.exe$", regex_constants::icase);
+		if (find_exe(bin_folder, rex) == false)
 			return NOTFOUND;
 
 		// 是否存在 \\bin\\**mingw** 文件夹
@@ -999,18 +1086,83 @@ int Page2::FindCLion(wstring path, bool g_bX64)
 
 			return CLION;
 		}
-
-		next = repeat;
 	}
 
-	if (next)
+	filesystem::path pp = path.c_str();
+	filesystem::path pr = safe_get_parent(pp);
+
+	if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
+		return FindCLion(pr, g_bX64);
+
+	return NOTFOUND;
+}
+
+int Page2::FindDevCpp(wstring path, bool g_bX64)
+{
+	// 没有指定路径就查找注册表
+	if (path == L"")
 	{
-		filesystem::path pp = path.c_str();
-		filesystem::path pr = safe_get_parent(pp);
+		wstring p = reg.GetMingWPath(DEVCPP, g_bX64);
+		if (p != L"")
+		{
+			mingw_Groups[DEVCPP]->mingw_path = p.c_str();
+			VSIDE* item = new VSIDE(mingw_Groups[DEVCPP]->name.c_str(), L"", L"", DEVCPP, true, MINGW);
+			exist_list.push_back(item);
+			return DEVCPP;
+		}
 
-		if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
-			return FindCLion(pr, id);
+		VSIDE* item = new VSIDE(mingw_Groups[DEVCPP]->name.c_str(), L"", L"", DEVCPP, false, MINGW);
+		not_exist_list.push_back(item);
+		return NOTFOUND;
 	}
+
+	///////////////////////////////////////////////////////
+	/////////////// 手动指定路径查找
+	EMingWGroups* ep = mingw_Groups[DEVCPP];
+	wstring p = path;
+	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
+		p += L"\\";
+
+	bool next = false;
+	wstring bin_folder = findFolder(p, L"bin");
+	if (bin_folder != L"")
+	{
+		wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
+		if (find_exe(bin_folder, rex) == false)
+			return NOTFOUND;
+
+		// 是否存在 \\**mingw** 文件夹
+		wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
+		wstring mingw_folder = findFolder(bin_folder, rex);
+		if (mingw_folder != L"")
+		{
+			wstring mingw_install_path;
+			mingw_install_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
+
+			if (mingw_install_path != L"")
+			{
+				ep->w64_32 = 64;
+			}
+			else
+			{
+				mingw_install_path = findFolder(mingw_folder, L"i686-w64-mingw32");		// 32 位
+				ep->w64_32 = 32;
+			}
+			if (mingw_install_path == L"")
+				return NOTFOUND;
+
+			ep->mingw_path = mingw_install_path;
+			check_mingw(ep);
+
+			return DEVCPP;
+		}
+	}
+
+	filesystem::path pp = path.c_str();
+	filesystem::path pr = safe_get_parent(pp);
+
+	if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
+		return FindDevCpp(pr, g_bX64);
 
 	return NOTFOUND;
 }
@@ -1019,7 +1171,7 @@ int Page2::FindCLion(wstring path, bool g_bX64)
 /// 检测是否存在 clion**.exe
 /// </summary>
 /// <param name="path"></param>
-bool Page2::findCLion_exe(wstring path)
+bool Page2::find_exe(wstring path, wregex rex)
 {
 	wstring searchPath = path + L"*";;
 	WIN32_FIND_DATAW findData;
@@ -1030,7 +1182,6 @@ bool Page2::findCLion_exe(wstring path)
 
 	wsmatch ms;
 	wstring result = L"";
-	wregex rex(L"^clion.*?\\.exe$", regex_constants::icase);
 	do {
 		// 跳过 "." 和 ".."
 		if (wcscmp(findData.cFileName, L".") == 0 ||
