@@ -22,8 +22,9 @@ using namespace std;
 #define VSNUM 10
 #define MINGW_SNUM 5
 
-#define NOTFOUND 0		// 当前目录没有需要的信息，需要继续查找
-#define ERROR_1	-1		// 定义为用户选择了与当前vs版本不符的安装目录
+#define OK			1
+#define NOTFOUND	0		// 当前目录没有需要的信息，需要继续查找
+#define ERROR_1		-1		// 定义为用户选择了与当前vs版本不符的安装目录
 #define ERROR_SYSTEM -2
 
 #define VISUAL_STUDIO	0
@@ -84,14 +85,14 @@ public:
 	wstring findFolder(wstring path, const wchar_t* folder);
 	wstring findFolder(wstring path, wregex rex);
 	int exeVersion(wstring clpath);
-	int clVersion_2017(wstring p, int id);
-	int AnalysisPath(wstring path, int id, bool repeat = true);
+	int clVersion_2017(wstring p, VSIDE*);
+	int AnalysisPath(wstring path, VSIDE* vec, bool repeat = true);
 	filesystem::path safe_get_parent(const filesystem::path& filepath);
 	void check(EGroups* ep);
 
-	int FindSDK(wstring path, int identity, bool g_bX64);
+	int FindSDK(wstring path, int id, VSIDE* vec, bool g_bX64);
 	bool find_exe(wstring, wregex);
-	int analysis_mingw(wstring p, int identity);
+	int analysis_mingw(wstring p, int, VSIDE*);
 	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
 	wstring ReadProcessOutput(const wstring& command);

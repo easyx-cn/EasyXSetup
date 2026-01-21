@@ -143,9 +143,9 @@ void Page2::InitIDE()
 		exist_list.push_back(item);
 	}
 
-	FindSDK(L"", DEVCPP, g_bX64);
-	FindSDK(L"", CLION, g_bX64);
-	FindSDK(L"", CODEBLOCKS, g_bX64);
+	FindSDK(L"", DEVCPP, NULL, g_bX64);
+	FindSDK(L"", CLION, NULL, g_bX64);
+	FindSDK(L"", CODEBLOCKS, NULL, g_bX64);
 
 	for (list<VSIDE*>::iterator itor = exist_list.begin(); itor != exist_list.end(); itor++)
 	{
@@ -277,20 +277,36 @@ void Page2::Draw(int& running, int& current_page)
 						wstring path = OpenFolder();
 						if (!path.empty())
 						{
-							int ver = AnalysisPath(path, (*itor)->id);
-							if (ver == NOTFOUND)
+							if ((*itor)->type == VISUAL_STUDIO)
 							{
-								popup_active = true;
-								popup_msg = L"未检测到 VS";
-							}
-							else if (ver == ERROR_1)
-							{
-								popup_active = true;
-								popup_msg = L"版本错误，请重新选择对应版本";
+								int ver = AnalysisPath(path, *itor);
+								if (ver == NOTFOUND)
+								{
+									popup_active = true;
+									popup_msg = L"未检测到 VS";
+								}
+								else if (ver == ERROR_1)
+								{
+									popup_active = true;
+									popup_msg = L"版本错误，请重新选择对应版本";
+								}
+								else
+								{
+									(*itor)->exist = true;
+								}
 							}
 							else
 							{
-								(*itor)->exist = true;
+								int ver = FindSDK(path, (*itor)->id, *itor, false);
+								if (ver == NOTFOUND)
+								{
+									popup_active = true;
+									popup_msg = L"未检测到编译器";
+								}
+								else
+								{
+									(*itor)->exist = true;
+								}
 							}
 						}
 					}
@@ -798,9 +814,9 @@ void Page2::check(EGroups* ep)
 /// </summary>
 /// <param name="path"></param>
 /// <returns></returns>
-int Page2::AnalysisPath(wstring path, int id, bool repeat)
+int Page2::AnalysisPath(wstring path, VSIDE* vec, bool repeat)
 {
-	EGroups* ep = eGroups[id];
+	EGroups* ep = eGroups[vec->id];
 	wstring p = path;
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
 		p += L"\\";
@@ -821,10 +837,12 @@ int Page2::AnalysisPath(wstring path, int id, bool repeat)
 			ep->path_libx64 = L"lib\\amd64\\";
 			ep->vcpath = ver_c; 
 			ep->path_h = L"include\\";
+			vec->path_1 = L"头文件路径 " + ver_c + ep->path_h;
+			vec->path_2 = L"库文件路径 " + ver_c + ep->path_libx86 + L" " + ver_c + ep->path_libx64;
 			check(ep);
 		}
 		else
-			cl_ver = clVersion_2017(ver_c, id); // >= 2017 的版本
+			cl_ver = clVersion_2017(ver_c, vec); // >= 2017 的版本
 
 		if (cl_ver != NOTFOUND)
 			return cl_ver;
@@ -840,7 +858,7 @@ int Page2::AnalysisPath(wstring path, int id, bool repeat)
 			cl_ver = exeVersion(ver_c + L"bin\\cl.exe");
 			if (cl_ver != NOTFOUND)
 			{
-				EGroups* ep = eGroups[id];
+				EGroups* ep = eGroups[vec->id];
 				if (cl_ver != ep->ver)
 					return ERROR_1;
 
@@ -848,19 +866,21 @@ int Page2::AnalysisPath(wstring path, int id, bool repeat)
 				ep->path_libx64 = L"";
 				ep->vcpath = ver_c;
 				ep->path_h = L"include\\";
+				vec->path_1 = L"头文件路径 " + ver_c + ep->path_h;
+				vec->path_2 = L"库文件路径 " + ver_c + ep->path_libx86;
 				check(ep);
 				return cl_ver;
 			}
 		}
-		cl_ver = clVersion_2017(p + L"community\\vc\\", id);
+		cl_ver = clVersion_2017(p + L"community\\vc\\", vec);
 		if (cl_ver != NOTFOUND)	// 如果版本不对也需要返回，结束递归，否则会一直循环
 			return cl_ver;
 
-		cl_ver = clVersion_2017(p + L"professional\\vc\\", id);
+		cl_ver = clVersion_2017(p + L"professional\\vc\\", vec);
 		if (cl_ver != NOTFOUND)
 			return cl_ver;
 
-		cl_ver = clVersion_2017(p + L"enterprise\\vc\\", id);
+		cl_ver = clVersion_2017(p + L"enterprise\\vc\\", vec);
 		if (cl_ver != NOTFOUND)
 			return cl_ver;
 
@@ -896,13 +916,13 @@ int Page2::AnalysisPath(wstring path, int id, bool repeat)
 		filesystem::path pr = safe_get_parent(pp);
 
 		if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
-			return AnalysisPath(pr, id);
+			return AnalysisPath(pr, vec);
 	}
 
 	return NOTFOUND;
 }
 
-int Page2::clVersion_2017(wstring p, int id)
+int Page2::clVersion_2017(wstring p, VSIDE* vec)
 {
 	wstring type = L"";
 	DWORD cl_ver = NOTFOUND;
@@ -915,7 +935,7 @@ int Page2::clVersion_2017(wstring p, int id)
 		cl_ver = exeVersion(ver_c + L"bin\\Hostx86\\x86\\cl.exe");
 		if (cl_ver != NOTFOUND)
 		{
-			EGroups* ep = eGroups[id];
+			EGroups* ep = eGroups[vec->id];
 			if (cl_ver != ep->ver)
 				return ERROR_1;
 
@@ -923,6 +943,8 @@ int Page2::clVersion_2017(wstring p, int id)
 			ep->path_libx64 = L"lib\\x64\\";
 			ep->vcpath = p + L"Auxiliary\\VS\\";
 			ep->path_h = L"include\\";
+			vec->path_1 = L"头文件路径 " + ep->vcpath + ep->path_h;
+			vec->path_2 = L"库文件路径 " + ep->vcpath + ep->path_libx86 + L" " + ver_c + ep->path_libx64;
 			check(ep);
 			return cl_ver;
 		}
@@ -1058,7 +1080,7 @@ void Page2::check_mingw(EMingWGroups* ep)
 	}
 }
 
-int Page2::FindSDK(wstring path, int identity, bool g_bX64)
+int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 {
 	// 没有指定路径就查找注册表
 	if (path == L"")
@@ -1068,7 +1090,7 @@ int Page2::FindSDK(wstring path, int identity, bool g_bX64)
 		{
 			mingw_Groups[identity]->mingw_path = p.c_str();
 
-			analysis_mingw(p, identity);
+			analysis_mingw(p, identity, vec);
 
 			wstring path1 = L"头文件路径 " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_h;
 			wstring path2 = L"";
@@ -1112,7 +1134,7 @@ int Page2::FindSDK(wstring path, int identity, bool g_bX64)
 	}
 	else
 	{
-		wregex rex(L"^.*?codeblcoks.*?\\.exe$", regex_constants::icase);
+		wregex rex(L"^.*?codeblocks.*?\\.exe$", regex_constants::icase);
 		result = find_exe(p, rex);
 	}
 
@@ -1126,21 +1148,26 @@ int Page2::FindSDK(wstring path, int identity, bool g_bX64)
 
 			p = bin_folder;
 		}
-		analysis_mingw(p, identity);
+		int re = analysis_mingw(p, identity, vec);
+		if (re == OK)
+			return OK;
 	}
 
 	filesystem::path pp = path.c_str();
 	filesystem::path pr = safe_get_parent(pp);
 
 	if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
-		return FindSDK(pr, identity, g_bX64);
+		return FindSDK(pr, identity, vec, g_bX64);
 
 	return NOTFOUND;
 }
 
-int Page2::analysis_mingw(wstring p, int identity)
+int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 {
-	EMingWGroups* ep = mingw_Groups[identity];
+	EMingWGroups* ep = mingw_Groups[id];
+	wstring p = path;
+	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
+		p += L"\\";
 
 	// 是否存在 \\**mingw** 文件夹
 	wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
@@ -1154,7 +1181,18 @@ int Page2::analysis_mingw(wstring p, int identity)
 		{
 			ep->w64_32 = 64;
 			ep->path_lib64 = L"lib\\";
-			ep->path_lib32 = L"lib32\\";
+			if(id != CODEBLOCKS)			// 没有32位
+				ep->path_lib32 = L"lib32\\";
+
+			if (vec != NULL)
+			{
+				vec->path_1 = L"头文件路径 " + mingw_install_path + ep->path_h;
+				vec->path_2 = L"库文件路径";
+				if(ep->path_lib32 != L"")
+					vec->path_2 += L" " + mingw_install_path + ep->path_lib32;
+				if(ep->path_lib64 != L"")
+					vec->path_2 += L" " + mingw_install_path + ep->path_lib64;
+			}
 		}
 		else
 		{
@@ -1170,6 +1208,11 @@ int Page2::analysis_mingw(wstring p, int identity)
 			ep->w64_32 = 32;
 			ep->path_lib64 = L"";
 			ep->path_lib32 = L"lib\\";
+			if (vec != NULL)
+			{
+				vec->path_1 = L"头文件路径 " + mingw_install_path + ep->path_h;
+				vec->path_2 = L"库文件路径 " + mingw_install_path + ep->path_lib32;
+			}
 		}
 		if (mingw_install_path == L"")
 			return NOTFOUND;
@@ -1177,8 +1220,9 @@ int Page2::analysis_mingw(wstring p, int identity)
 		ep->mingw_path = mingw_install_path;
 		check_mingw(ep);
 
-		return identity;
+		return OK;
 	}
+	return NOTFOUND;
 }
 
 /// <summary>
