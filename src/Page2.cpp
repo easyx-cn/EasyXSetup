@@ -92,10 +92,6 @@ void Page2::InitIDE()
 	if (amd != L"" && wcscmp(amd.c_str(), L"AMD64") == 0)
 		g_bX64 = true;
 
-	FindSDK(L"", DEVCPP, g_bX64);
-	FindSDK(L"", CLION, g_bX64);
-	FindSDK(L"", CODEBLOCKS, g_bX64);
-
 	for (int i = 0; i < VSNUM; i++)
 	{
 		int v = eGroups[i]->ver;
@@ -146,6 +142,10 @@ void Page2::InitIDE()
 		VSIDE* item = new VSIDE(name.c_str(), path1.c_str(), path2.c_str(), i, true, VISUAL_STUDIO);
 		exist_list.push_back(item);
 	}
+
+	FindSDK(L"", DEVCPP, g_bX64);
+	FindSDK(L"", CLION, g_bX64);
+	FindSDK(L"", CODEBLOCKS, g_bX64);
 
 	for (list<VSIDE*>::iterator itor = exist_list.begin(); itor != exist_list.end(); itor++)
 	{
@@ -545,19 +545,19 @@ wstring Page2::Install_mingw(int id)
 	wstring dest_lib64 = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyx.a";
 	wstring dest_libw64 = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyxw.a";
 
-	src_lib32 = strExeName + L"lib32\\libeasyx.a";
-	src_libw32 = strExeName + L"lib32\\libeasyxw.a";
-	src_lib64 = strExeName + L"lib64\\libeasyx.a";
-	src_libw64 = strExeName + L"lib64\\libeasyxw.a";
+	src_lib32 = strExeName + L"mingw_easyx\\lib32\\libeasyx.a";
+	src_libw32 = strExeName + L"mingw_easyx\\lib32\\libeasyxw.a";
+	src_lib64 = strExeName + L"mingw_easyx\\lib64\\libeasyx.a";
+	src_libw64 = strExeName + L"mingw_easyx\\lib64\\libeasyxw.a";
 
 	wstring err = L"";
 	if (mingw_Groups[id]->mingw_path != L"")
 	{
-		wstring src = strExeName + L"include\\easyx.h";
+		wstring src = strExeName + L"mingw_easyx\\include\\easyx.h";
 		wstring dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"easyx.h";
 		err += copy_Files(src.c_str(), dst.c_str());
 		
-		src = strExeName + L"include\\graphics.h";
+		src = strExeName + L"mingw_easyx\\include\\graphics.h";
 		dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"graphics.h";
 		err += copy_Files(src.c_str(), dst.c_str());
 
