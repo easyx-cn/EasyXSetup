@@ -222,7 +222,7 @@ wstring Reg::GetMingWPath(int identity, bool g_bX64)
 				{
 					subkeyname = buf;
 					key = L"InstallLocation";
-					localPath = RegRead(hKey, subkeyname, key);
+					localPath = RegRead(hKey, subkeyname, key) + L"\\bin";
 					break;
 				}
 			}

@@ -63,6 +63,7 @@ public:
 	wstring Install_mingw(int id);
 	wstring UninstallHelp();
 	wstring Uninstall(int id);
+	wstring Uninstall_mingw(int id);
 	wstring InstallHelp();
 
 	wstring deleteFile(wchar_t const* dst);
@@ -88,10 +89,9 @@ public:
 	filesystem::path safe_get_parent(const filesystem::path& filepath);
 	void check(EGroups* ep);
 
-	int FindCLion(wstring path, bool g_bX64);
-	int FindDevCpp(wstring path, bool g_bX64);
-	int FindCodeBlocks(wstring path, bool g_bX64);
+	int FindSDK(wstring path, int identity, bool g_bX64);
 	bool find_exe(wstring, wregex);
+	int analysis_mingw(wstring p, int identity);
 	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
 	wstring ReadProcessOutput(const wstring& command);

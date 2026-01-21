@@ -92,8 +92,9 @@ void Page2::InitIDE()
 	if (amd != L"" && wcscmp(amd.c_str(), L"AMD64") == 0)
 		g_bX64 = true;
 
-	FindCLion(L"", g_bX64);
-	FindDevCpp(L"", g_bX64);
+	FindSDK(L"", DEVCPP, g_bX64);
+	FindSDK(L"", CLION, g_bX64);
+	FindSDK(L"", CODEBLOCKS, g_bX64);
 
 	for (int i = 0; i < VSNUM; i++)
 	{
@@ -188,6 +189,7 @@ void Page2::Draw(int& running, int& current_page)
 			int cur_height = 10;
 
 			int s_h = textheight(_T("天"));
+			float tip_w = 340.0f;
 
 			for (list<VSIDE*>::iterator itor = ide_list.begin(); itor != ide_list.end(); itor++)
 			{
@@ -203,12 +205,12 @@ void Page2::Draw(int& running, int& current_page)
 
 					// 鼠标悬浮 tooltip
 					if (!popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds)) {
-						nk_tooltip_begin(_ctx, 300.0f);
+						nk_tooltip_begin(_ctx, tip_w);
 						const char* str = toU8((*itor)->path_1.c_str());
 						int len = strlen(str);
-						int s_w = textwidth(toTCHAR(str));
-						float line = s_w / 300.0f + 1;
-						nk_layout_row_static(_ctx, line * s_h, 300, 1);
+						int s_w = textwidth((*itor)->path_1.c_str());
+						float line = s_w / tip_w + 1;
+						nk_layout_row_static(_ctx, line * s_h, tip_w - 10, 1);
 						nk_label_colored_wrap(_ctx, str, nk_rgb(233, 233, 233));
 						nk_tooltip_end(_ctx);
 					}
@@ -220,12 +222,12 @@ void Page2::Draw(int& running, int& current_page)
 					// 鼠标悬浮 tooltip
 					if (!popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds))
 					{
-						nk_tooltip_begin(_ctx, 300.0f);
+						nk_tooltip_begin(_ctx, tip_w);
 						const char* str = toU8((*itor)->path_2.c_str());
 						int len = strlen(str);
-						int s_w = textwidth(toTCHAR(str));
-						float line = s_w / 300.0f + 1;
-						nk_layout_row_static(_ctx, line * s_h, 300, 1);
+						int s_w = textwidth((*itor)->path_2.c_str());
+						float line = s_w / tip_w + 1.5;
+						nk_layout_row_static(_ctx, line * s_h, tip_w - 10, 1);
 						nk_label_colored_wrap(_ctx, str, nk_rgb(233, 233, 233));
 						nk_tooltip_end(_ctx);
 					}
@@ -255,8 +257,10 @@ void Page2::Draw(int& running, int& current_page)
 						wstring s;
 						if ((*itor)->id == -1)
 							s = UninstallHelp();
-						else
+						else if ((*itor)->type == VISUAL_STUDIO)
 							s = Uninstall((*itor)->id);
+						else
+							s = Uninstall_mingw((*itor)->id);
 
 						popup_active = true;
 						popup_msg = s;
@@ -584,6 +588,56 @@ wstring Page2::Install_mingw(int id)
 	}
 
 	return err;
+}
+
+wstring Page2::Uninstall_mingw(int id)
+{
+	bool result = false;
+	wstring err = L"卸载失败";
+	wstring f;
+	if (mingw_Groups[id]->mingw_path != L"")
+	{
+		f = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"easyx.h";
+		result = DeleteFileW(f.c_str());
+		if (!result)
+			return err;
+
+		f = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"graphics.h";
+		result = DeleteFileW(f.c_str());
+		if (!result)
+			return err;
+	}
+
+	if (mingw_Groups[id]->path_lib32 != L"")
+	{
+		f = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib32 + L"libeasyx.a";
+		result = DeleteFileW(f.c_str());
+		if (!result)
+			return err;
+
+		f = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib32 + L"libeasyxw.a";
+		result = DeleteFileW(f.c_str());
+		if (!result)
+			return err;
+	}
+
+	if (mingw_Groups[id]->path_lib64 != L"")
+	{
+		f = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyx.a";
+		result = DeleteFileW(f.c_str());
+		if (!result)
+			return err;
+
+		f = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyxw.a";
+		result = DeleteFileW(f.c_str());
+		if (!result)
+			return err;
+	}
+
+	if (!result)
+		return err;
+	else
+		return L"卸载成功";
 }
 
 wstring Page2::Uninstall(int id) {
@@ -1004,248 +1058,127 @@ void Page2::check_mingw(EMingWGroups* ep)
 	}
 }
 
-
-/// <summary>
-/// 
-/// </summary>
-/// <param name="path"></param>
-int Page2::FindCLion(wstring path, bool g_bX64)
+int Page2::FindSDK(wstring path, int identity, bool g_bX64)
 {
 	// 没有指定路径就查找注册表
 	if (path == L"")
 	{
-		wstring p = reg.GetMingWPath(CLION, g_bX64);
+		wstring p = reg.GetMingWPath(identity, g_bX64);
 		if (p != L"")
 		{
-			mingw_Groups[CLION]->mingw_path = p.c_str();
-			VSIDE* item = new VSIDE(mingw_Groups[CLION]->name.c_str(), L"", L"", CLION, true, MINGW);
+			mingw_Groups[identity]->mingw_path = p.c_str();
+
+			analysis_mingw(p, identity);
+
+			wstring path1 = L"头文件路径 " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_h;
+			wstring path2 = L"";
+			if (mingw_Groups[identity]->path_lib32 != L"")
+				path2 += L" " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_lib32;
+
+			if (mingw_Groups[identity]->path_lib64 != L"") {
+				path2 += L" " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_lib64;
+			}
+
+			if (path2 != L"")
+				path2 = L"库文件路径" + path2 + L"";
+
+			VSIDE* item = new VSIDE(mingw_Groups[identity]->name.c_str(), path1, path2, identity, true, MINGW);
 			exist_list.push_back(item);
-			return CLION;
+			return identity;
 		}
 
-		VSIDE* item = new VSIDE(mingw_Groups[CLION]->name.c_str(), L"", L"", CLION, false, MINGW);
+		VSIDE* item = new VSIDE(mingw_Groups[identity]->name.c_str(), L"", L"", identity, false, MINGW);
 		not_exist_list.push_back(item);
 		return NOTFOUND;
 	}
 
 	///////////////////////////////////////////////////////
 	/////////////// 手动指定路径查找
-	EMingWGroups* ep = mingw_Groups[CLION];
 	wstring p = path;
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
 		p += L"\\";
 
-	bool next = false;
-	wstring bin_folder = findFolder(p, L"bin");
-	if (bin_folder != L"")
+	bool result = false;
+	wstring bin_folder = L"";
+	if (identity == CLION)
 	{
-		wregex rex(L"^.*?clion.*?\\.exe$", regex_constants::icase);
-		if (find_exe(bin_folder, rex) == false)
+		bin_folder = findFolder(p, L"bin");
+		result = bin_folder != L"";
+	}
+	else if (identity == DEVCPP)
+	{
+		wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
+		result = find_exe(p, rex);
+	}
+	else
+	{
+		wregex rex(L"^.*?codeblcoks.*?\\.exe$", regex_constants::icase);
+		result = find_exe(p, rex);
+	}
+
+	if (result)
+	{
+		if (identity == CLION)
+		{
+			wregex rex(L"^.*?clion.*?\\.exe$", regex_constants::icase);
+			if (find_exe(bin_folder, rex) == false)
+				return NOTFOUND;
+
+			p = bin_folder;
+		}
+		analysis_mingw(p, identity);
+	}
+
+	filesystem::path pp = path.c_str();
+	filesystem::path pr = safe_get_parent(pp);
+
+	if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
+		return FindSDK(pr, identity, g_bX64);
+
+	return NOTFOUND;
+}
+
+int Page2::analysis_mingw(wstring p, int identity)
+{
+	EMingWGroups* ep = mingw_Groups[identity];
+
+	// 是否存在 \\**mingw** 文件夹
+	wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
+	wstring mingw_folder = findFolder(p, rex);
+	if (mingw_folder != L"")
+	{
+		wstring mingw_install_path;
+		mingw_install_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
+
+		if (mingw_install_path != L"")
+		{
+			ep->w64_32 = 64;
+			ep->path_lib64 = L"lib\\";
+			ep->path_lib32 = L"lib32\\";
+		}
+		else
+		{
+			// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
+			// 5.6  5.7  版本是这样的
+			mingw_install_path = findFolder(mingw_folder + L"mingw32\\", L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
+
+			if (mingw_install_path == L"")	// 如果 mingw32 下没有 include
+				mingw_install_path = mingw_folder;
+			else
+				mingw_install_path = mingw_folder + L"mingw32\\";
+
+			ep->w64_32 = 32;
+			ep->path_lib64 = L"";
+			ep->path_lib32 = L"lib\\";
+		}
+		if (mingw_install_path == L"")
 			return NOTFOUND;
 
-		// 是否存在 \\bin\\**mingw** 文件夹
-		wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
-		wstring mingw_folder = findFolder(bin_folder, rex);
-		if (mingw_folder != L"")
-		{
-			wstring mingw_install_path;
-			mingw_install_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
+		ep->mingw_path = mingw_install_path;
+		check_mingw(ep);
 
-			if (mingw_install_path != L"")
-			{
-				ep->w64_32 = 64;
-				ep->path_lib64 = L"lib\\";
-				ep->path_lib32 = L"lib32\\";
-			}
-			else
-			{
-				// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
-				mingw_install_path = findFolder(mingw_folder + L"mingw32\\", L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
-
-				if (mingw_install_path == L"")	// 如果 mingw32 下没有 include
-					mingw_install_path = mingw_folder;
-				else
-					mingw_install_path = mingw_folder + L"mingw32\\";
-
-				ep->w64_32 = 32;
-				ep->path_lib64 = L"";
-				ep->path_lib32 = L"lib\\";
-			}
-
-			if (mingw_install_path == L"")
-				return NOTFOUND;
-
-			ep->mingw_path = mingw_install_path;
-			check_mingw(ep);
-
-			return CLION;
-		}
+		return identity;
 	}
-
-	filesystem::path pp = path.c_str();
-	filesystem::path pr = safe_get_parent(pp);
-
-	if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
-		return FindCLion(pr, g_bX64);
-
-	return NOTFOUND;
-}
-
-int Page2::FindDevCpp(wstring path, bool g_bX64)
-{
-	// 没有指定路径就查找注册表
-	if (path == L"")
-	{
-		wstring p = reg.GetMingWPath(DEVCPP, g_bX64);
-		if (p != L"")
-		{
-			mingw_Groups[DEVCPP]->mingw_path = p.c_str();
-			VSIDE* item = new VSIDE(mingw_Groups[DEVCPP]->name.c_str(), L"", L"", DEVCPP, true, MINGW);
-			exist_list.push_back(item);
-			return DEVCPP;
-		}
-
-		VSIDE* item = new VSIDE(mingw_Groups[DEVCPP]->name.c_str(), L"", L"", DEVCPP, false, MINGW);
-		not_exist_list.push_back(item);
-		return NOTFOUND;
-	}
-
-	///////////////////////////////////////////////////////
-	/////////////// 手动指定路径查找
-	EMingWGroups* ep = mingw_Groups[DEVCPP];
-	wstring p = path;
-	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
-		p += L"\\";
-
-	bool next = false;
-	wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
-	if (find_exe(p, rex) == true)
-	{
-		// 是否存在 \\**mingw** 文件夹
-		wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
-		wstring mingw_folder = findFolder(p, rex);
-		if (mingw_folder != L"")
-		{
-			wstring mingw_install_path;
-			mingw_install_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
-
-			if (mingw_install_path != L"")
-			{
-				ep->w64_32 = 64;
-				ep->path_lib64 = L"lib\\";
-				ep->path_lib32 = L"lib32\\";
-			}
-			else
-			{
-				// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
-				// 5.6  5.7  版本是这样的
-				mingw_install_path = findFolder(mingw_folder + L"mingw32\\", L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
-
-				if (mingw_install_path == L"")	// 如果 mingw32 下没有 include
-					mingw_install_path = mingw_folder;
-				else
-					mingw_install_path = mingw_folder + L"mingw32\\";
-
-				ep->w64_32 = 32;
-				ep->path_lib64 = L"";
-				ep->path_lib32 = L"lib\\";
-			}
-			if (mingw_install_path == L"")
-				return NOTFOUND;
-
-			ep->mingw_path = mingw_install_path;
-			check_mingw(ep);
-
-			return DEVCPP;
-		}
-	}
-
-	filesystem::path pp = path.c_str();
-	filesystem::path pr = safe_get_parent(pp);
-
-	if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
-		return FindDevCpp(pr, g_bX64);
-
-	return NOTFOUND;
-}
-
-
-int Page2::FindCodeBlocks(wstring path, bool g_bX64)
-{
-	// 没有指定路径就查找注册表
-	if (path == L"")
-	{
-		wstring p = reg.GetMingWPath(DEVCPP, g_bX64);
-		if (p != L"")
-		{
-			mingw_Groups[DEVCPP]->mingw_path = p.c_str();
-			VSIDE* item = new VSIDE(mingw_Groups[DEVCPP]->name.c_str(), L"", L"", DEVCPP, true, MINGW);
-			exist_list.push_back(item);
-			return DEVCPP;
-		}
-
-		VSIDE* item = new VSIDE(mingw_Groups[DEVCPP]->name.c_str(), L"", L"", DEVCPP, false, MINGW);
-		not_exist_list.push_back(item);
-		return NOTFOUND;
-	}
-
-	///////////////////////////////////////////////////////
-	/////////////// 手动指定路径查找
-	EMingWGroups* ep = mingw_Groups[DEVCPP];
-	wstring p = path;
-	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
-		p += L"\\";
-
-	bool next = false;
-	wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
-	if (find_exe(p, rex) == true)
-	{
-		// 是否存在 \\**mingw** 文件夹
-		wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
-		wstring mingw_folder = findFolder(p, rex);
-		if (mingw_folder != L"")
-		{
-			wstring mingw_install_path;
-			mingw_install_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
-
-			if (mingw_install_path != L"")
-			{
-				ep->w64_32 = 64;
-				ep->path_lib64 = L"lib\\";
-				ep->path_lib32 = L"lib32\\";
-			}
-			else
-			{
-				// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
-				// 5.6  5.7  版本是这样的
-				mingw_install_path = findFolder(mingw_folder + L"mingw32\\", L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
-
-				if (mingw_install_path == L"")	// 如果 mingw32 下没有 include
-					mingw_install_path = mingw_folder;
-				else
-					mingw_install_path = mingw_folder + L"mingw32\\";
-
-				ep->w64_32 = 32;
-				ep->path_lib64 = L"";
-				ep->path_lib32 = L"lib\\";
-			}
-			if (mingw_install_path == L"")
-				return NOTFOUND;
-
-			ep->mingw_path = mingw_install_path;
-			check_mingw(ep);
-
-			return DEVCPP;
-		}
-	}
-
-	filesystem::path pp = path.c_str();
-	filesystem::path pr = safe_get_parent(pp);
-
-	if (_wcsicmp(pp.root_path().c_str(), pr.c_str()) != 0)
-		return FindDevCpp(pr, g_bX64);
-
-	return NOTFOUND;
 }
 
 /// <summary>
