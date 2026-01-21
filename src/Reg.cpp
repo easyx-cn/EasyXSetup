@@ -223,14 +223,33 @@ wstring Reg::GetMingWPath(int identity, bool g_bX64)
 					subkeyname = buf;
 					key = L"InstallLocation";
 					localPath = RegRead(hKey, subkeyname, key);
-					break
+					break;
 				}
 			}
 		}
 		break;
 	}
 	case CODEBLOCKS:
+	{
+		hKey = HKEY_USERS;
+		subkeyname = L"\\SoftWare\\CodeBlocks";
+
+		int numKeys;
+		int len = lstrlenW(subkeyname);
+		wchar_t** aNames = RegEnumKeys(hKey, NULL, &numKeys);
+		for (int i = 0; i < numKeys; i++)
+		{
+			int buf_len = len + lstrlenW(aNames[i]) + 1;
+			wchar_t* buf = new wchar_t[buf_len];
+			_snwprintf_s(buf, buf_len, buf_len, L"%s%s", aNames[i], subkeyname);
+			buf[buf_len - 1] = L'\0';
+			
+			localPath = RegRead(HKEY_USERS, buf, L"Path");
+			if(localPath != L"")
+				break;
+		}
 		break;
+	}
 	default:
 		break;
 	}

@@ -82,7 +82,7 @@ public:
 	int toVer(DWORD);
 	wstring findFolder(wstring path, const wchar_t* folder);
 	wstring findFolder(wstring path, wregex rex);
-	int clVersion(wstring clpath);
+	int exeVersion(wstring clpath);
 	int clVersion_2017(wstring p, int id);
 	int AnalysisPath(wstring path, int id, bool repeat = true);
 	filesystem::path safe_get_parent(const filesystem::path& filepath);
@@ -90,6 +90,7 @@ public:
 
 	int FindCLion(wstring path, bool g_bX64);
 	int FindDevCpp(wstring path, bool g_bX64);
+	int FindCodeBlocks(wstring path, bool g_bX64);
 	bool find_exe(wstring, wregex);
 	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
