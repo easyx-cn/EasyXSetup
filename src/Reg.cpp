@@ -152,7 +152,6 @@ wstring Reg::RegRead(HKEY defkey, wchar_t const* subkeyname, wchar_t const* key)
 
 wstring Reg::GetMingWPath(int identity, bool g_bX64)
 {
-	return L"";
 	wstring localPath = L"";
 	HKEY hKey = HKEY_LOCAL_MACHINE;
 	wchar_t const* path = NULL;

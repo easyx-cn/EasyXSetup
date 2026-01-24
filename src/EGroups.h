@@ -39,7 +39,6 @@ public:
 	wstring mingw_path;					// x86_64-w64-mingw32\\     i686-w64-mingw32\\ 路径
 	wstring path_h;						// 固定位 include \\。
 	wstring path_lib32, path_lib64;		// devcpp 存在 lib32\\ 文件夹
-	int w64_32;							// 32 或 64 位
 	int version;
 
 	EMingWGroups(wstring n, int id)

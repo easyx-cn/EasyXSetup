@@ -1093,13 +1093,13 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 /// <returns></returns>
 wstring Page2::check_mingw_thread(wstring bin_path)
 {
-	wstring cmd = bin_path + L"gcc -v";
+	wstring cmd = L"\"" + bin_path + L"gcc\" -v";
 	string str = ReadProcessOutput(cmd);
 
 	wstring ver_info = ANSIToUnicode(str.c_str());
 
 	wsmatch ms;
-	wregex rex(L"Thread model.\s*?posix", regex_constants::icase);
+	wregex rex(L"Thread model.\\s*?posix", regex_constants::icase);
 	bool r = regex_search(ver_info, ms, rex);
 	if (r)
 		return _POSIX;
@@ -1114,17 +1114,13 @@ wstring Page2::check_mingw_thread(wstring bin_path)
 /// <returns></returns>
 wstring Page2::check_mingw_runtime(wstring lib_path)
 {
-	wregex rex_ucrt(L"^(lib)?ucrt.*?\\.a|(lib)$", regex_constants::icase);
-	wregex rex_msvcrt(L"^(lib)?msvcrt\\.a|(lib)$", regex_constants::icase);
-
-	if (find_file(lib_path, rex_ucrt))
+	wstring c = lib_path + L"libucrt.a";
+	wstring c2 = lib_path + L"ucrt.lib";
+	wstring c3 = lib_path + L"libucrtbase.a";
+	if (_waccess(c.c_str(), 0) == 0 || _waccess(c2.c_str(), 0) == 0 || _waccess(c3.c_str(), 0) == 0)
 		return _UCRT;
 
-	// 可能同时都存在，但最后是 ucrt 运行时！！！
-	if (find_file(lib_path, rex_msvcrt))
-		return _MSVCRT;
-
-	return L"";
+	return _MSVCRT;
 }
 
 void Page2::check_mingw(EMingWGroups* ep)
@@ -1185,38 +1181,46 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
 		p += L"\\";
 
-	bool result = false;
-	wstring bin_folder = L"";
-	if (identity == CLION)
+	/*bool result = false;
+	wstring bin_folder = findFolder(p, L"bin");
+	if (bin_folder != L"")
 	{
-		bin_folder = findFolder(p, L"bin");
-		result = bin_folder != L"";
-	}
-	else if (identity == DEVCPP)
-	{
-		wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
+		wregex rex(L"^gcc.exe$", regex_constants::icase);
 		result = find_file(p, rex);
-	}
-	else
-	{
-		wregex rex(L"^.*?codeblocks.*?\\.exe$", regex_constants::icase);
-		result = find_file(p, rex);
-	}
+	}*/
 
-	if (result)
-	{
-		if (identity == CLION)
-		{
-			wregex rex(L"^.*?clion.*?\\.exe$", regex_constants::icase);
-			if (find_file(bin_folder, rex) == false)
-				return NOTFOUND;
+	//if (identity == CLION)
+	//{
+	//	bin_folder = findFolder(p, L"bin");
+	//	result = bin_folder != L"";
+	//}
+	//else if (identity == DEVCPP)
+	//{
+	//	wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
+	//	result = find_file(p, rex);
+	//}
+	//else
+	//{
+	//	wregex rex(L"^.*?codeblocks.*?\\.exe$", regex_constants::icase);
+	//	result = find_file(p, rex);
+	//}
 
-			p = bin_folder;
-		}
-		int re = analysis_mingw(p, identity, vec);
-		if (re == OK)
-			return OK;
-	}
+	//if (result)
+	//{
+	//	if (identity == CLION)
+	//	{
+	//		wregex rex(L"^.*?clion.*?\\.exe$", regex_constants::icase);
+	//		if (find_file(bin_folder, rex) == false)
+	//			return NOTFOUND;
+
+	//		p = bin_folder;
+	//	}
+	//}
+
+
+	int re = analysis_mingw(p, identity, vec);
+	if (re == OK)
+		return OK;
 
 	filesystem::path pp = path.c_str();
 	filesystem::path pr = safe_get_parent(pp);
@@ -1234,17 +1238,25 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
 		p += L"\\";
 
+	// 如果当前目录 p 下有 \bin\gcc.exe，继续后面操作
+	// 如果没有，返回上层目录继续查找
+	wregex rex_gcc(L"^gcc.exe$", regex_constants::icase);
+	bool result = find_file(p + L"\\bin\\", rex_gcc);
+	if (!result)
+		return NOTFOUND;
+
+
+
 	// 是否存在 \\**mingw** 文件夹
 	wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
 	wstring mingw_folder = findFolder(p, rex);
 	if (mingw_folder != L"")
 	{
-		wstring x86_64_path;
-		x86_64_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
+		wstring x86_64_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
+		wstring i686_path = findFolder(mingw_folder, L"i686-w64-mingw32");		// 32 位
 
 		if (x86_64_path != L"")
 		{
-			ep->w64_32 = 64;
 			ep->path_lib64 = L"lib\\";
 			if(id != CODEBLOCKS)			// 没有32位
 				ep->path_lib32 = L"lib32\\";
@@ -1259,18 +1271,37 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 					vec->path_2 += L" " + x86_64_path + ep->path_lib64;
 			}
 		}
+		else if (i686_path != L"")
+		{
+			ep->path_lib64 = L"lib64\\";
+			if (id != CODEBLOCKS)			// 没有32位
+				ep->path_lib32 = L"lib\\";
+
+			if (vec != NULL)
+			{
+				vec->path_1 = L"头文件路径 " + x86_64_path + ep->path_h;
+				vec->path_2 = L"库文件路径";
+				if (ep->path_lib32 != L"")
+					vec->path_2 += L" " + x86_64_path + ep->path_lib32;
+				if (ep->path_lib64 != L"")
+					vec->path_2 += L" " + x86_64_path + ep->path_lib64;
+			}
+		}
 		else
 		{
+			wstring mingw32_path = findFolder(mingw_folder, L"mingw32");
+			if (mingw32_path == L"")
+				return NOTFOUND;
+
 			// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
 			// 5.6  5.7  版本是这样的
-			x86_64_path = findFolder(mingw_folder + L"mingw32\\", L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
+			x86_64_path = findFolder(mingw32_path, L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
 
 			if (x86_64_path == L"")	// 如果 mingw32 下没有 include
 				x86_64_path = mingw_folder;
 			else
-				x86_64_path = mingw_folder + L"mingw32\\";
+				x86_64_path = mingw32_path;
 
-			ep->w64_32 = 32;
 			ep->path_lib64 = L"";
 			ep->path_lib32 = L"lib\\";
 			if (vec != NULL)
