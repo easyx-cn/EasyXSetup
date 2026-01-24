@@ -19,5 +19,6 @@ public:
 	MyWindow(nk_context*, int, int);
 	~MyWindow();
 
+	void Init();
 	void Draw();
 };

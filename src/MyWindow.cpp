@@ -37,6 +37,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	ctx = nk_easyx_init(font, dc, WIDTH, HEIGHT);
 	MyWindow window(ctx, WIDTH, HEIGHT);
 
+	bool init = false;
+
 	BeginBatchDraw();
 	while (running)
 	{
@@ -58,6 +60,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		FlushBatchDraw();
 
 		Sleep(10);
+
+		// 先显示一次页面，避免初始化遍历文件需要时间，导致页面未及时显示出来
+		if (!init)
+		{
+			init = true;
+			window.Init();
+		}
 	}
 
 	EndBatchDraw();
@@ -83,6 +92,10 @@ MyWindow::~MyWindow()
 {
 }
 
+void MyWindow::Init()
+{
+	p2->InitIDE();
+}
 
 void MyWindow::Draw()
 {

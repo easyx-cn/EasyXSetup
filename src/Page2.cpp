@@ -24,8 +24,6 @@ Page2::Page2(nk_context* ctx, int w, int h)
 	_ctx = ctx;
 	Width = w;
 	Height = h;
-
-	InitIDE();
 }
 
 
@@ -1396,7 +1394,8 @@ string Page2::ReadProcessOutput(const wstring& command)
 	si.hStdError = hWritePipe;
 	si.hStdOutput = hWritePipe;
 	si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-	si.dwFlags = STARTF_USESTDHANDLES;
+	si.dwFlags = /*STARTF_USESTDHANDLES | */STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_HIDE;
 	ZeroMemory(&pi, sizeof(pi));
 
 	// 准备命令行（必须可写）
