@@ -30,6 +30,16 @@ using namespace std;
 #define VISUAL_STUDIO	0
 #define MINGW			1
 
+#define _SEH	L"_seh"
+#define _SJLJ	L"_sjlj"
+#define _DWARF	L"_dwarf"
+
+#define _UCRT	L"_ucrt"
+#define _MSVCRT	L"_msvcrt"
+
+#define _WIN32	L"_win32"
+#define _POSIX	L"_posix"
+
 class Page2
 {
 	nk_context* _ctx;
@@ -91,9 +101,12 @@ public:
 	void check(EGroups* ep);
 
 	int FindSDK(wstring path, int id, VSIDE* vec, bool g_bX64);
-	bool find_exe(wstring, wregex);
+	bool find_file(wstring, wregex);
 	int analysis_mingw(wstring p, int, VSIDE*);
 	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
-	wstring ReadProcessOutput(const wstring& command);
+	wstring check_mingw_exception(wstring);	// seh  sjlj  dwarf
+	wstring check_mingw_thread(wstring);		// win32 posix
+	wstring check_mingw_runtime(wstring);		// MSVCRT  UCRT
+	string ReadProcessOutput(const wstring& command);
 };

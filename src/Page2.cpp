@@ -1060,7 +1060,72 @@ wstring Page2::findFolder(wstring path, const wchar_t* folder)
 	return result;
 }
 
+/// <summary>
+/// libgcc_s_seh-1.dll
+/// libgcc_s_sjlj-1.dll
+/// libgcc_s_dw2-1.dll
+/// libgcc_s_seh_64-1.dll
+/// </summary>
+/// <param name="mingw_path"></param>
+/// <returns></returns>
+wstring Page2::check_mingw_exception(wstring bin_path)
+{
+	wregex rex_seh(L"^libgcc_s_seh.*?-1\\.dll$", regex_constants::icase);
+	wregex rex_sjlj(L"^libgcc_s_sjlj.*?-1\\.dll$", regex_constants::icase);
+	wregex rex_dwarf(L"^libgcc_s_dw2.*?-1\\.dll$", regex_constants::icase);
 
+	if (find_file(bin_path, rex_seh))
+		return _SEH;
+
+	if (find_file(bin_path, rex_sjlj))
+		return _SJLJ;
+
+	if (find_file(bin_path, rex_dwarf))
+		return _DWARF;
+
+	return L"";
+}
+
+/// <summary>
+/// win32、posix
+/// </summary>
+/// <param name="mingw_path"></param>
+/// <returns></returns>
+wstring Page2::check_mingw_thread(wstring bin_path)
+{
+	wstring cmd = bin_path + L"gcc -v";
+	string str = ReadProcessOutput(cmd);
+
+	wstring ver_info = ANSIToUnicode(str.c_str());
+
+	wsmatch ms;
+	wregex rex(L"Thread model.\s*?posix", regex_constants::icase);
+	bool r = regex_search(ver_info, ms, rex);
+	if (r)
+		return _POSIX;
+	else
+		return _WIN32;
+}
+
+/// <summary>
+/// MSVCRT、UCRT
+/// </summary>
+/// <param name="mingw_path"></param>
+/// <returns></returns>
+wstring Page2::check_mingw_runtime(wstring lib_path)
+{
+	wregex rex_ucrt(L"^(lib)?ucrt.*?\\.a|(lib)$", regex_constants::icase);
+	wregex rex_msvcrt(L"^(lib)?msvcrt\\.a|(lib)$", regex_constants::icase);
+
+	if (find_file(lib_path, rex_ucrt))
+		return _UCRT;
+
+	// 可能同时都存在，但最后是 ucrt 运行时！！！
+	if (find_file(lib_path, rex_msvcrt))
+		return _MSVCRT;
+
+	return L"";
+}
 
 void Page2::check_mingw(EMingWGroups* ep)
 {
@@ -1130,12 +1195,12 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 	else if (identity == DEVCPP)
 	{
 		wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
-		result = find_exe(p, rex);
+		result = find_file(p, rex);
 	}
 	else
 	{
 		wregex rex(L"^.*?codeblocks.*?\\.exe$", regex_constants::icase);
-		result = find_exe(p, rex);
+		result = find_file(p, rex);
 	}
 
 	if (result)
@@ -1143,7 +1208,7 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 		if (identity == CLION)
 		{
 			wregex rex(L"^.*?clion.*?\\.exe$", regex_constants::icase);
-			if (find_exe(bin_folder, rex) == false)
+			if (find_file(bin_folder, rex) == false)
 				return NOTFOUND;
 
 			p = bin_folder;
@@ -1174,10 +1239,10 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 	wstring mingw_folder = findFolder(p, rex);
 	if (mingw_folder != L"")
 	{
-		wstring mingw_install_path;
-		mingw_install_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
+		wstring x86_64_path;
+		x86_64_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
 
-		if (mingw_install_path != L"")
+		if (x86_64_path != L"")
 		{
 			ep->w64_32 = 64;
 			ep->path_lib64 = L"lib\\";
@@ -1186,38 +1251,42 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 
 			if (vec != NULL)
 			{
-				vec->path_1 = L"头文件路径 " + mingw_install_path + ep->path_h;
+				vec->path_1 = L"头文件路径 " + x86_64_path + ep->path_h;
 				vec->path_2 = L"库文件路径";
 				if(ep->path_lib32 != L"")
-					vec->path_2 += L" " + mingw_install_path + ep->path_lib32;
+					vec->path_2 += L" " + x86_64_path + ep->path_lib32;
 				if(ep->path_lib64 != L"")
-					vec->path_2 += L" " + mingw_install_path + ep->path_lib64;
+					vec->path_2 += L" " + x86_64_path + ep->path_lib64;
 			}
 		}
 		else
 		{
 			// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
 			// 5.6  5.7  版本是这样的
-			mingw_install_path = findFolder(mingw_folder + L"mingw32\\", L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
+			x86_64_path = findFolder(mingw_folder + L"mingw32\\", L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
 
-			if (mingw_install_path == L"")	// 如果 mingw32 下没有 include
-				mingw_install_path = mingw_folder;
+			if (x86_64_path == L"")	// 如果 mingw32 下没有 include
+				x86_64_path = mingw_folder;
 			else
-				mingw_install_path = mingw_folder + L"mingw32\\";
+				x86_64_path = mingw_folder + L"mingw32\\";
 
 			ep->w64_32 = 32;
 			ep->path_lib64 = L"";
 			ep->path_lib32 = L"lib\\";
 			if (vec != NULL)
 			{
-				vec->path_1 = L"头文件路径 " + mingw_install_path + ep->path_h;
-				vec->path_2 = L"库文件路径 " + mingw_install_path + ep->path_lib32;
+				vec->path_1 = L"头文件路径 " + x86_64_path + ep->path_h;
+				vec->path_2 = L"库文件路径 " + x86_64_path + ep->path_lib32;
 			}
 		}
-		if (mingw_install_path == L"")
+		if (x86_64_path == L"")
 			return NOTFOUND;
 
-		ep->mingw_path = mingw_install_path;
+		ep->mingw_path = x86_64_path;
+
+		check_mingw_exception(mingw_folder + L"bin\\");
+		check_mingw_thread(mingw_folder + L"bin\\");
+		check_mingw_runtime(x86_64_path + L"lib\\");
 		check_mingw(ep);
 
 		return OK;
@@ -1226,10 +1295,10 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 }
 
 /// <summary>
-/// 检测是否存在 clion**.exe
+/// 
 /// </summary>
 /// <param name="path"></param>
-bool Page2::find_exe(wstring path, wregex rex)
+bool Page2::find_file(wstring path, wregex rex)
 {
 	wstring searchPath = path + L"*";;
 	WIN32_FIND_DATAW findData;
@@ -1270,7 +1339,7 @@ void Page2::findCLion_mingw(wstring path)
 /// </summary>
 /// <param name="command"></param>
 /// <returns></returns>
-wstring Page2::ReadProcessOutput(const wstring& command)
+string Page2::ReadProcessOutput(const wstring& command)
 {
 	SECURITY_ATTRIBUTES sa;
 	HANDLE hReadPipe, hWritePipe;
@@ -1284,7 +1353,7 @@ wstring Page2::ReadProcessOutput(const wstring& command)
 
 	// 创建管道
 	if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) {
-		return L"创建管道失败";
+		return "创建管道失败";
 	}
 
 	// 确保读句柄不被继承
@@ -1310,16 +1379,16 @@ wstring Page2::ReadProcessOutput(const wstring& command)
 		delete[] cmdLine;
 		CloseHandle(hReadPipe);
 		CloseHandle(hWritePipe);
-		return L"创建进程失败: " + to_wstring(GetLastError());
+		return "创建进程失败: " + to_string(GetLastError());
 	}
 
 	delete[] cmdLine;
 	CloseHandle(hWritePipe);  // 在子进程中已继承，这里关闭
 
 	// 读取输出
-	wstring output;
+	string output;
 	DWORD bytesRead;
-	wchar_t buffer[4096];
+	char buffer[4096];
 	BOOL success = FALSE;
 
 	while (true)
@@ -1328,7 +1397,7 @@ wstring Page2::ReadProcessOutput(const wstring& command)
 		if (!success || bytesRead == 0)
 			break;
 
-		buffer[bytesRead] = L'\0';
+		buffer[bytesRead] = '\0';
 		output += buffer;
 	}
 
