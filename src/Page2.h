@@ -105,8 +105,9 @@ public:
 	int analysis_mingw(wstring p, int, VSIDE*);
 	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
+	bool Support(VSIDE* vec, int type, wstring exception, wstring runtime);
 	wstring check_mingw_exception(wstring);	// seh  sjlj  dwarf
-	wstring check_mingw_thread(wstring);		// win32 posix
+	//wstring check_mingw_thread(wstring);		// win32 posix
 	wstring check_mingw_runtime(wstring);		// MSVCRT  UCRT
 	string ReadProcessOutput(const wstring& command);
 };

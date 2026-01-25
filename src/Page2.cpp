@@ -154,6 +154,9 @@ void Page2::InitIDE()
 	{
 		ide_list.push_back(*itor);
 	}
+
+	VSIDE* item = new VSIDE(L"其它 MingW", L"", L"", OTHER_IDE, false, MINGW);
+	ide_list.push_back(item);
 }
 
 void Page2::Draw(int& running, int& current_page)
@@ -1084,26 +1087,26 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 	return L"";
 }
 
-/// <summary>
-/// win32、posix
-/// </summary>
-/// <param name="mingw_path"></param>
-/// <returns></returns>
-wstring Page2::check_mingw_thread(wstring bin_path)
-{
-	wstring cmd = L"\"" + bin_path + L"gcc\" -v";
-	string str = ReadProcessOutput(cmd);
-
-	wstring ver_info = ANSIToUnicode(str.c_str());
-
-	wsmatch ms;
-	wregex rex(L"Thread model.\\s*?posix", regex_constants::icase);
-	bool r = regex_search(ver_info, ms, rex);
-	if (r)
-		return _POSIX;
-	else
-		return _WIN32;
-}
+///// <summary>
+///// win32、posix
+///// </summary>
+///// <param name="mingw_path"></param>
+///// <returns></returns>
+//wstring Page2::check_mingw_thread(wstring bin_path)
+//{
+//	wstring cmd = L"\"" + bin_path + L"gcc\" -v";
+//	string str = ReadProcessOutput(cmd);
+//
+//	wstring ver_info = ANSIToUnicode(str.c_str());
+//
+//	wsmatch ms;
+//	wregex rex(L"Thread model.\\s*?posix", regex_constants::icase);
+//	bool r = regex_search(ver_info, ms, rex);
+//	if (r)
+//		return _POSIX;
+//	else
+//		return _WIN32;
+//}
 
 /// <summary>
 /// MSVCRT、UCRT
@@ -1145,12 +1148,9 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 	if (path == L"")
 	{
 		wstring p = reg.GetMingWPath(identity, g_bX64);
-		if (p != L"")
+		int result = analysis_mingw(p, identity, vec);
+		if (result == OK)
 		{
-			mingw_Groups[identity]->mingw_path = p.c_str();
-
-			analysis_mingw(p, identity, vec);
-
 			wstring path1 = L"头文件路径 " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_h;
 			wstring path2 = L"";
 			if (mingw_Groups[identity]->path_lib32 != L"")
@@ -1179,43 +1179,6 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
 		p += L"\\";
 
-	/*bool result = false;
-	wstring bin_folder = findFolder(p, L"bin");
-	if (bin_folder != L"")
-	{
-		wregex rex(L"^gcc.exe$", regex_constants::icase);
-		result = find_file(p, rex);
-	}*/
-
-	//if (identity == CLION)
-	//{
-	//	bin_folder = findFolder(p, L"bin");
-	//	result = bin_folder != L"";
-	//}
-	//else if (identity == DEVCPP)
-	//{
-	//	wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
-	//	result = find_file(p, rex);
-	//}
-	//else
-	//{
-	//	wregex rex(L"^.*?codeblocks.*?\\.exe$", regex_constants::icase);
-	//	result = find_file(p, rex);
-	//}
-
-	//if (result)
-	//{
-	//	if (identity == CLION)
-	//	{
-	//		wregex rex(L"^.*?clion.*?\\.exe$", regex_constants::icase);
-	//		if (find_file(bin_folder, rex) == false)
-	//			return NOTFOUND;
-
-	//		p = bin_folder;
-	//	}
-	//}
-
-
 	int re = analysis_mingw(p, identity, vec);
 	if (re == OK)
 		return OK;
@@ -1231,6 +1194,9 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 
 int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 {
+	if (path == L"")
+		return NOTFOUND;
+
 	EMingWGroups* ep = mingw_Groups[id];
 	wstring p = path;
 	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
@@ -1243,8 +1209,6 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 	if (!result)
 		return NOTFOUND;
 
-
-
 	// 是否存在 \\**mingw** 文件夹
 	wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
 	wstring mingw_folder = findFolder(p, rex);
@@ -1252,22 +1216,26 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 	{
 		wstring x86_64_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
 		wstring i686_path = findFolder(mingw_folder, L"i686-w64-mingw32");		// 32 位
+		wstring mingw32_path = findFolder(mingw_folder, L"mingw32");
+		wstring mingw_path = L"";
+		int type;
 
+		wstring path_1, path_2;
 		if (x86_64_path != L"")
 		{
 			ep->path_lib64 = L"lib\\";
 			if(id != CODEBLOCKS)			// 没有32位
 				ep->path_lib32 = L"lib32\\";
 
-			if (vec != NULL)
-			{
-				vec->path_1 = L"头文件路径 " + x86_64_path + ep->path_h;
-				vec->path_2 = L"库文件路径";
-				if(ep->path_lib32 != L"")
-					vec->path_2 += L" " + x86_64_path + ep->path_lib32;
-				if(ep->path_lib64 != L"")
-					vec->path_2 += L" " + x86_64_path + ep->path_lib64;
-			}
+			path_1 = L"头文件路径 " + x86_64_path + ep->path_h;
+			path_2 = L"库文件路径";
+			if (ep->path_lib32 != L"")
+				path_2 += L" " + x86_64_path + ep->path_lib32;
+			if (ep->path_lib64 != L"")
+				path_2 += L" " + x86_64_path + ep->path_lib64;
+
+			type = 64;
+			mingw_path = x86_64_path;
 		}
 		else if (i686_path != L"")
 		{
@@ -1275,52 +1243,101 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 			if (id != CODEBLOCKS)			// 没有32位
 				ep->path_lib32 = L"lib\\";
 
-			if (vec != NULL)
-			{
-				vec->path_1 = L"头文件路径 " + x86_64_path + ep->path_h;
-				vec->path_2 = L"库文件路径";
-				if (ep->path_lib32 != L"")
-					vec->path_2 += L" " + x86_64_path + ep->path_lib32;
-				if (ep->path_lib64 != L"")
-					vec->path_2 += L" " + x86_64_path + ep->path_lib64;
-			}
-		}
-		else
-		{
-			wstring mingw32_path = findFolder(mingw_folder, L"mingw32");
-			if (mingw32_path == L"")
-				return NOTFOUND;
+			path_1 = L"头文件路径 " + i686_path + ep->path_h;
+			path_2 = L"库文件路径";
+			if (ep->path_lib32 != L"")
+				path_2 += L" " + i686_path + ep->path_lib32;
+			if (ep->path_lib64 != L"")
+				path_2 += L" " + i686_path + ep->path_lib64;
 
+			type = 32;
+			mingw_path = i686_path;
+		}
+		else if (mingw32_path != L"")
+		{
 			// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
 			// 5.6  5.7  版本是这样的
-			x86_64_path = findFolder(mingw32_path, L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
+			wstring include_path = findFolder(mingw32_path, L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
 
-			if (x86_64_path == L"")	// 如果 mingw32 下没有 include
-				x86_64_path = mingw_folder;
+			if (include_path == L"")	// 如果 mingw32 下没有 include
+				mingw_path = mingw_folder;
 			else
-				x86_64_path = mingw32_path;
+				mingw_path = mingw32_path;
 
 			ep->path_lib64 = L"";
 			ep->path_lib32 = L"lib\\";
+			path_1 = L"头文件路径 " + mingw_path + ep->path_h;
+			path_2 = L"库文件路径 " + mingw_path + ep->path_lib32;
+			type = 32;
+		}
+
+		if (mingw_path != L"")
+		{
 			if (vec != NULL)
 			{
-				vec->path_1 = L"头文件路径 " + x86_64_path + ep->path_h;
-				vec->path_2 = L"库文件路径 " + x86_64_path + ep->path_lib32;
+				vec->path_1 = path_1;
+				vec->path_2 = path_2;
+			}
+			else
+			{
+				vec = new VSIDE(mingw_Groups[id]->name.c_str(), path_1, path_2, id, true, MINGW);
+				exist_list.push_back(vec);
 			}
 		}
-		if (x86_64_path == L"")
+		else
 			return NOTFOUND;
 
-		ep->mingw_path = x86_64_path;
+		ep->mingw_path = mingw_path;
 
-		check_mingw_exception(mingw_folder + L"bin\\");
-		check_mingw_thread(mingw_folder + L"bin\\");
-		check_mingw_runtime(x86_64_path + L"lib\\");
+		wstring ex = check_mingw_exception(mingw_folder + L"bin\\");
+		//wstring thred = check_mingw_thread(mingw_folder + L"bin\\");
+		wstring runtime = check_mingw_runtime(mingw_path + L"lib\\");
 		check_mingw(ep);
+		Support(vec, type, ex, runtime);
 
 		return OK;
 	}
 	return NOTFOUND;
+}
+
+/// <summary>
+/// 支持类型：
+/// x86_64-posix-seh
+/// x86_64-win32-seh
+/// i686-posix-sjlj
+/// i686-win32-sjlj
+/// 支持 MSVCRT 版本，不支持 UCRT 版本。
+/// </summary>
+/// <param name="ep"></param>
+/// <param name="type"></param>
+/// <param name="thread"></param>
+/// <param name="exception"></param>
+/// <param name="runtime"></param>
+/// <returns></returns>
+bool Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime)
+{
+	const wchar_t* e = exception.c_str();
+	const wchar_t* r = runtime.c_str();
+
+	if (_wcsicmp(r, _UCRT) == 0)
+	{
+		vec->path_1 = L"不支持的 mignw64_ucrt 版本";
+		vec->path_2 = L"";
+		return false;
+	}
+
+	if (_wcsicmp(e, _DWARF) == 0)
+	{
+		vec->path_1 = L"不支持的 mignw64_dwarf 版本";
+		vec->path_2 = L"";
+		return false;
+	}
+
+	if (_wcsicmp(e, _SEH) == 0 && type == 64)
+		return true;
+
+	if (_wcsicmp(e, _SJLJ) == 0 && type == 32)
+		return true;
 }
 
 /// <summary>
