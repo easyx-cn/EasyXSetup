@@ -37,9 +37,6 @@ using namespace std;
 #define _UCRT	L"_ucrt"
 #define _MSVCRT	L"_msvcrt"
 
-#define _WIN32	L"_win32"
-#define _POSIX	L"_posix"
-
 class Page2
 {
 	nk_context* _ctx;
@@ -103,9 +100,8 @@ public:
 	int FindSDK(wstring path, int id, VSIDE* vec, bool g_bX64);
 	bool find_file(wstring, wregex);
 	int analysis_mingw(wstring p, int, VSIDE*);
-	void findCLion_mingw(wstring path);
 	void check_mingw(EMingWGroups* ep);
-	bool Support(VSIDE* vec, int type, wstring exception, wstring runtime);
+	int Support(VSIDE* vec, int type, wstring exception, wstring runtime);
 	wstring check_mingw_exception(wstring);	// seh  sjlj  dwarf
 	//wstring check_mingw_thread(wstring);		// win32 posix
 	wstring check_mingw_runtime(wstring);		// MSVCRT  UCRT

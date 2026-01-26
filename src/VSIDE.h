@@ -12,7 +12,7 @@ public:
 	wstring path_2;
 	bool checked;		// 是否勾选安装
 	bool installed;		// 是否安装成功
-	string msg;
+	wstring msg;
 	bool exist;
 	BYTE type;			// 是 【0】vs 还是 【1】devcpp...其它
 
@@ -25,6 +25,7 @@ public:
 		installed = false;
 		exist = e;
 		type = t;
+		msg = L"（未检测到）";
 	}
 	~VSIDE() {}
 };

@@ -270,7 +270,7 @@ void Page2::Draw(int& running, int& current_page)
 				else	// 灰色按钮
 				{
 					nk_layout_space_push(_ctx, nk_rect(110.0f, 0.0f, 230.0f, 30.0f));
-					nk_label(_ctx, u8"(未检测到)", NK_TEXT_LEFT);
+					nk_label(_ctx, toU8((*itor)->msg.c_str()), NK_TEXT_LEFT);
 
 					nk_layout_space_push(_ctx, nk_rect(Width - 135.0f, 0.0f, 95.0f, 30.0f));
 					if (nk_button_label_styled(_ctx, &btn, u8"选择安装目录"))
@@ -303,6 +303,11 @@ void Page2::Draw(int& running, int& current_page)
 								{
 									popup_active = true;
 									popup_msg = L"未检测到编译器";
+								}
+								else if (ver == ERROR_1)
+								{
+									popup_active = true;
+									popup_msg = (*itor)->msg;
 								}
 								else
 								{
@@ -1086,7 +1091,7 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 
 	return L"";
 }
-
+//
 ///// <summary>
 ///// win32、posix
 ///// </summary>
@@ -1109,19 +1114,21 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 //}
 
 /// <summary>
+/// \x86_64-w64-mingw32\lib\ 下
+/// 存在 libucrt.a\ucrt.lib\libucrtbase.a 则是 UCRT
+/// 存在 libmsvcrt.a\msvcrt.lib 且无任何 ucrt 文件，则是 MSVCRT（AI 文档，不准确!!  20.03同时存在两种，最后验证可支持 easyx）
 /// MSVCRT、UCRT
 /// </summary>
 /// <param name="mingw_path"></param>
 /// <returns></returns>
 wstring Page2::check_mingw_runtime(wstring lib_path)
 {
-	wstring c = lib_path + L"libucrt.a";
-	wstring c2 = lib_path + L"ucrt.lib";
-	wstring c3 = lib_path + L"libucrtbase.a";
-	if (_waccess(c.c_str(), 0) == 0 || _waccess(c2.c_str(), 0) == 0 || _waccess(c3.c_str(), 0) == 0)
-		return _UCRT;
+	wstring c = lib_path + L"libmsvcrt.a";
+	wstring c2 = lib_path + L"msvcrt.lib";
+	if (_waccess(c.c_str(), 0) == 0 || _waccess(c2.c_str(), 0) == 0)
+		return _MSVCRT;
 
-	return _MSVCRT;
+	return _UCRT;
 }
 
 void Page2::check_mingw(EMingWGroups* ep)
@@ -1137,51 +1144,34 @@ void Page2::check_mingw(EMingWGroups* ep)
 	}
 
 	if (_waccess((ep->mingw_path + ep->path_lib32).c_str(), 0) != 0) {
-	//	ep->mingw_path = L"";
+		//	ep->mingw_path = L"";
 		ep->path_lib32 = L"";
 	}
 }
 
 int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 {
-	// 没有指定路径就查找注册表
+	// 首次运行初始化时，进入该逻辑
 	if (path == L"")
 	{
-		wstring p = reg.GetMingWPath(identity, g_bX64);
-		int result = analysis_mingw(p, identity, vec);
-		if (result == OK)
+		path = reg.GetMingWPath(identity, g_bX64);
+		int result = analysis_mingw(path, identity, vec);
+
+		// 必须在递归循环 FindSDK() 外添加 not_exist_list
+		if (result == NOTFOUND)
 		{
-			wstring path1 = L"头文件路径 " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_h;
-			wstring path2 = L"";
-			if (mingw_Groups[identity]->path_lib32 != L"")
-				path2 += L" " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_lib32;
-
-			if (mingw_Groups[identity]->path_lib64 != L"") {
-				path2 += L" " + mingw_Groups[identity]->mingw_path + mingw_Groups[identity]->path_lib64;
-			}
-
-			if (path2 != L"")
-				path2 = L"库文件路径" + path2 + L"";
-
-			VSIDE* item = new VSIDE(mingw_Groups[identity]->name.c_str(), path1, path2, identity, true, MINGW);
-			exist_list.push_back(item);
-			return identity;
+			VSIDE* item = new VSIDE(mingw_Groups[identity]->name.c_str(), L"", L"", identity, false, MINGW);
+			not_exist_list.push_back(item);
 		}
-
-		VSIDE* item = new VSIDE(mingw_Groups[identity]->name.c_str(), L"", L"", identity, false, MINGW);
-		not_exist_list.push_back(item);
-		return NOTFOUND;
+		return result;
 	}
 
 	///////////////////////////////////////////////////////
 	/////////////// 手动指定路径查找
-	wstring p = path;
-	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
-		p += L"\\";
 
-	int re = analysis_mingw(p, identity, vec);
-	if (re == OK)
-		return OK;
+	int re = analysis_mingw(path, identity, vec);
+	if (re == OK || re == ERROR_1)
+		return re;
 
 	filesystem::path pp = path.c_str();
 	filesystem::path pr = safe_get_parent(pp);
@@ -1192,26 +1182,42 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 	return NOTFOUND;
 }
 
-int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
+
+/// <summary>
+/// clion:  注册表路径 + /bin/mingw../bin/gcc.exe
+/// codeblocks: 注册表路径 + /mingw../bin/gcc.exe
+/// devcpp: 注册表路径 + /mingw64/bin/gcc.exe
+/// </summary>
+/// <param name="p"></param>
+/// <param name="id"></param>
+/// <param name="vec"></param>
+/// <returns></returns>
+int Page2::analysis_mingw(wstring p, int id, VSIDE* vec)
 {
-	if (path == L"")
+	if (p == L"")
 		return NOTFOUND;
 
-	EMingWGroups* ep = mingw_Groups[id];
-	wstring p = path;
-	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
+	if (p[lstrlenW(p.c_str()) - 1] != L'\\')
 		p += L"\\";
 
-	// 如果当前目录 p 下有 \bin\gcc.exe，继续后面操作
-	// 如果没有，返回上层目录继续查找
-	wregex rex_gcc(L"^gcc.exe$", regex_constants::icase);
-	bool result = find_file(p + L"\\bin\\", rex_gcc);
-	if (!result)
-		return NOTFOUND;
+	EMingWGroups* ep = mingw_Groups[id];
+
+	//// 如果当前目录 p 下有 \bin\gcc.exe，继续后面操作
+	//// 如果没有，返回上层目录继续查找
+	//wregex rex_gcc(L"^gcc.exe$", regex_constants::icase);
+	//bool result = find_file(p + L"bin\\", rex_gcc);
+	//if (!result)
+	//	return NOTFOUND;
 
 	// 是否存在 \\**mingw** 文件夹
 	wregex rex(L"^.*?mingw.*?$", regex_constants::icase);
 	wstring mingw_folder = findFolder(p, rex);
+
+	// 如果没有发现 mingwxxx 文件夹，反而发现 bin，则进入查找它
+	wstring bin_folder = findFolder(p, L"bin");
+	if (mingw_folder == L"" && bin_folder != L"")
+		mingw_folder = findFolder(bin_folder, rex);
+
 	if (mingw_folder != L"")
 	{
 		wstring x86_64_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
@@ -1270,15 +1276,18 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 			path_2 = L"库文件路径 " + mingw_path + ep->path_lib32;
 			type = 32;
 		}
+		else
+			return NOTFOUND;
 
 		if (mingw_path != L"")
 		{
+			// 如果是手动选择目录，会进入该逻辑
 			if (vec != NULL)
 			{
 				vec->path_1 = path_1;
 				vec->path_2 = path_2;
 			}
-			else
+			else	// 初始化自动检测时，进入该逻辑
 			{
 				vec = new VSIDE(mingw_Groups[id]->name.c_str(), path_1, path_2, id, true, MINGW);
 				exist_list.push_back(vec);
@@ -1292,10 +1301,11 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 		wstring ex = check_mingw_exception(mingw_folder + L"bin\\");
 		//wstring thred = check_mingw_thread(mingw_folder + L"bin\\");
 		wstring runtime = check_mingw_runtime(mingw_path + L"lib\\");
-		check_mingw(ep);
-		Support(vec, type, ex, runtime);
 
-		return OK;
+		check_mingw(ep);
+
+		int r = Support(vec, type, ex, runtime);
+		return r;
 	}
 	return NOTFOUND;
 }
@@ -1314,30 +1324,41 @@ int Page2::analysis_mingw(wstring path, int id, VSIDE* vec)
 /// <param name="exception"></param>
 /// <param name="runtime"></param>
 /// <returns></returns>
-bool Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime)
+int Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime)
 {
 	const wchar_t* e = exception.c_str();
 	const wchar_t* r = runtime.c_str();
 
 	if (_wcsicmp(r, _UCRT) == 0)
 	{
-		vec->path_1 = L"不支持的 mignw64_ucrt 版本";
-		vec->path_2 = L"";
-		return false;
+		vec->msg = L"（不支持的 mignw64_ucrt 版本）";
+		vec->exist = false;
+		return ERROR_1;
 	}
 
 	if (_wcsicmp(e, _DWARF) == 0)
 	{
-		vec->path_1 = L"不支持的 mignw64_dwarf 版本";
-		vec->path_2 = L"";
-		return false;
+		vec->msg = L"（不支持的 mignw64_dwarf 版本）";
+		vec->exist = false;
+		return ERROR_1;
 	}
 
 	if (_wcsicmp(e, _SEH) == 0 && type == 64)
-		return true;
+		return OK;
 
 	if (_wcsicmp(e, _SJLJ) == 0 && type == 32)
-		return true;
+		return OK;
+
+	wstring err = L"不支持的 mingw64_";
+	if (type == 64)
+		err += L"x86_64";
+	else
+		err += L"i686";
+	err += e;
+	vec->msg = err;
+	vec->exist = false;
+
+	return ERROR_1;
 }
 
 /// <summary>
@@ -1351,10 +1372,9 @@ bool Page2::find_file(wstring path, wregex rex)
 	HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
 
 	if (hFind == INVALID_HANDLE_VALUE)
-		return L"";
+		return false;
 
 	wsmatch ms;
-	wstring result = L"";
 	do {
 		// 跳过 "." 和 ".."
 		if (wcscmp(findData.cFileName, L".") == 0 ||
@@ -1371,14 +1391,6 @@ bool Page2::find_file(wstring path, wregex rex)
 
 	return false;
 }
-
-// 查找 \bin\*mingw*\ 路径
-// \bin\*mingw*\bin\gcc.exe 检测 mignw 是 32、64 位？
-void Page2::findCLion_mingw(wstring path)
-{
-	// 不用检测，直接更具文件夹名称判断 x86_64-w64-mingw32   i686-w64-mingw32
-}
-
 
 /// <summary>
 /// 传入参数： F:\\xxx\\..\\gcc.exe -v  获取mingw 版本，路径有空格需要加双引号
