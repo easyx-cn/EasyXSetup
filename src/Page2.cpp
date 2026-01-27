@@ -185,7 +185,11 @@ void Page2::Draw(int& running, int& current_page)
 
 		_ctx->style.window.fixed_background.data.color = nk_rgb(235, 235, 209);
 
+		// 鼠标悬停检测限制在控件内部！
+		struct nk_rect bounds = nk_widget_bounds(_ctx);		// 获取的是后面紧跟的第一个控件坐标
+		bool in_rect = nk_input_is_mouse_hovering_rect(&_ctx->input, bounds);
 		if (nk_group_begin(_ctx, "group_p2_list", 0)) {		// group_p2_list 不能与其它 nk_group_begin 相同，否则会串滚
+
 			int i = 0, h = 26;
 			int cur_height = 10;
 
@@ -201,11 +205,11 @@ void Page2::Draw(int& running, int& current_page)
 				if ((*itor)->exist == true)
 				{
 					nk_layout_space_push(_ctx, nk_rect(110, 0, 230, 13));
+					bounds = nk_widget_bounds(_ctx);
 					nk_label_colored(_ctx, toU8((*itor)->path_1.c_str()), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
-					struct nk_rect bounds = nk_widget_bounds(_ctx);
 
 					// 鼠标悬浮 tooltip
-					if (!popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds)) {
+					if (in_rect && !popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds)) {
 						nk_tooltip_begin(_ctx, tip_w);
 						const char* str = toU8((*itor)->path_1.c_str());
 						int len = strlen(str);
@@ -217,11 +221,11 @@ void Page2::Draw(int& running, int& current_page)
 					}
 
 					nk_layout_space_push(_ctx, nk_rect(110, 16, 230, 13));
-					nk_label_colored(_ctx, toU8((*itor)->path_2.c_str()), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 					bounds = nk_widget_bounds(_ctx);
+					nk_label_colored(_ctx, toU8((*itor)->path_2.c_str()), NK_TEXT_LEFT, nk_rgb(33, 33, 33));
 
 					// 鼠标悬浮 tooltip
-					if (!popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds))
+					if (in_rect && !popup_active && nk_input_is_mouse_hovering_rect(&_ctx->input, bounds))
 					{
 						nk_tooltip_begin(_ctx, tip_w);
 						const char* str = toU8((*itor)->path_2.c_str());
