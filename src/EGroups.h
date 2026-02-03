@@ -39,13 +39,14 @@ public:
 	wstring mingw_path;					// x86_64-w64-mingw32\\     i686-w64-mingw32\\ 路径
 	wstring path_h;						// 固定位 include \\。
 	wstring path_lib32, path_lib64;		// devcpp 存在 lib32\\ 文件夹
-	int version;
+	bool use_devcpp_5_4_x86;				// devcpp5.4.0  x86 版本
 
 	EMingWGroups(wstring n, int id)
 	{
 		name = n;
 		identity = id;
 		path_h = L"include\\";
+		use_devcpp_5_4_x86 = false;
 	}
 
 	~EMingWGroups() {}

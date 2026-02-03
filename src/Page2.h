@@ -20,7 +20,7 @@ using namespace std;
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 #define VSNUM 10
-#define MINGW_SNUM 5
+#define MINGW_SNUM 6
 
 #define OK			1
 #define NOTFOUND	0		// 当前目录没有需要的信息，需要继续查找
@@ -34,8 +34,8 @@ using namespace std;
 #define _SJLJ	L"_sjlj"
 #define _DWARF	L"_dwarf"
 
-#define _UCRT	L"_ucrt"
-#define _MSVCRT	L"_msvcrt"
+#define _LIBUCRT	L"_ucrt"
+#define _LIBMSVCRT	L"_msvcrt"
 
 class Page2
 {
@@ -98,8 +98,8 @@ public:
 	void check(EGroups* ep);
 
 	int FindSDK(wstring path, int id, VSIDE* vec, bool g_bX64);
-	bool find_file(wstring, wregex);
-	int analysis_mingw(wstring p, int, VSIDE*);
+	wstring find_file(wstring, wregex);
+	int analysis_mingw(wstring p, int, VSIDE*, bool is_dev = false);
 	void check_mingw(EMingWGroups* ep);
 	int Support(VSIDE* vec, int type, wstring exception, wstring runtime);
 	wstring check_mingw_exception(wstring);	// seh  sjlj  dwarf

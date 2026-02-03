@@ -8,11 +8,13 @@ using namespace std;
 #define MAX_VALUE_NAME 16383
 
 
+// 数值必须与数组 mingw_Groups 符合，不能超出范围
 #define DEVCPP		0
 #define CODEBLOCKS	1
 #define CLION		2
 #define VSCODE		3
-#define OTHER_IDE	4
+#define CFREE		4
+#define OTHER_IDE	5
 
 class Reg
 {

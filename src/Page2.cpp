@@ -6,16 +6,16 @@
 EFiles* eFiles[] = {
 	new EFiles(L"include\\", L"easyx.h"),
 	new EFiles(L"include\\", L"graphics.h"),
-	new EFiles(L"lib\\VC6\\x86\\", L"EasyXa.lib"),
-	new EFiles(L"lib\\VC6\\x86\\", L"EasyXw.lib"),
-	new EFiles(L"lib\\VC2008\\x86\\", L"EasyXa.lib"),
-	new EFiles(L"lib\\VC2008\\x86\\", L"EasyXw.lib"),
-	new EFiles(L"lib\\VC2008\\x64\\", L"EasyXa.lib"),
-	new EFiles(L"lib\\VC2008\\x64\\", L"EasyXw.lib"),
-	new EFiles(L"lib\\VC2015\\x86\\", L"EasyXa.lib"),
-	new EFiles(L"lib\\VC2015\\x86\\", L"EasyXw.lib"),
-	new EFiles(L"lib\\VC2015\\x64\\", L"EasyXa.lib"),
-	new EFiles(L"lib\\VC2015\\x64\\", L"EasyXw.lib")
+	new EFiles(L"lib_vs\\VC6\\x86\\", L"EasyXa.lib"),
+	new EFiles(L"lib_vs\\VC6\\x86\\", L"EasyXw.lib"),
+	new EFiles(L"lib_vs\\VC2008\\x86\\", L"EasyXa.lib"),
+	new EFiles(L"lib_vs\\VC2008\\x86\\", L"EasyXw.lib"),
+	new EFiles(L"lib_vs\\VC2008\\x64\\", L"EasyXa.lib"),
+	new EFiles(L"lib_vs\\VC2008\\x64\\", L"EasyXw.lib"),
+	new EFiles(L"lib_vs\\VC2015\\x86\\", L"EasyXa.lib"),
+	new EFiles(L"lib_vs\\VC2015\\x86\\", L"EasyXw.lib"),
+	new EFiles(L"lib_vs\\VC2015\\x64\\", L"EasyXa.lib"),
+	new EFiles(L"lib_vs\\VC2015\\x64\\", L"EasyXw.lib")
 };
 
 
@@ -73,11 +73,12 @@ void Page2::InitIDE()
 	eGroups[8] = new EGroups(L"  Visual C++ 2022", 2022, L"", L"", L"", L"", a, b3, b5);
 	eGroups[9] = new EGroups(L"  Visual C++ 2026", 2026, L"", L"", L"", L"", a, b3, b5);
 
-	mingw_Groups[0] = new EMingWGroups(L"  DevCpp", DEVCPP);
-	mingw_Groups[1] = new EMingWGroups(L"  CodeBlocks", CODEBLOCKS);
-	mingw_Groups[2] = new EMingWGroups(L"  CLion", CLION);
-	mingw_Groups[3] = new EMingWGroups(L"  VSCode", VSCODE);
-	mingw_Groups[4] = new EMingWGroups(L"  其他基于MingW的IDE", OTHER_IDE);
+	mingw_Groups[DEVCPP] = new EMingWGroups(L"  DevCpp", DEVCPP);
+	mingw_Groups[CODEBLOCKS] = new EMingWGroups(L"  CodeBlocks", CODEBLOCKS);
+	mingw_Groups[CLION] = new EMingWGroups(L"  CLion", CLION);
+	mingw_Groups[VSCODE] = new EMingWGroups(L"  VSCode", VSCODE);
+	mingw_Groups[CFREE] = new EMingWGroups(L"  C-Free", CFREE);
+	mingw_Groups[OTHER_IDE] = new EMingWGroups(L"  其它 Mingw", OTHER_IDE);
 
 	wstring path = L"桌面路径 ";
 	path += g_pathDesktop();
@@ -144,6 +145,7 @@ void Page2::InitIDE()
 	FindSDK(L"", DEVCPP, NULL, g_bX64);
 	FindSDK(L"", CLION, NULL, g_bX64);
 	FindSDK(L"", CODEBLOCKS, NULL, g_bX64);
+	FindSDK(L"", CFREE, NULL, g_bX64);
 
 	for (list<VSIDE*>::iterator itor = exist_list.begin(); itor != exist_list.end(); itor++)
 	{
@@ -155,7 +157,7 @@ void Page2::InitIDE()
 		ide_list.push_back(*itor);
 	}
 
-	VSIDE* item = new VSIDE(L"其它 MingW", L"", L"", OTHER_IDE, false, MINGW);
+	VSIDE* item = new VSIDE(mingw_Groups[OTHER_IDE]->name.c_str(), L"", L"", OTHER_IDE, false, MINGW);
 	ide_list.push_back(item);
 }
 
@@ -215,7 +217,7 @@ void Page2::Draw(int& running, int& current_page)
 						int len = strlen(str);
 						int s_w = textwidth((*itor)->path_1.c_str());
 						float line = s_w / tip_w + 1;
-						nk_layout_row_static(_ctx, line * s_h, tip_w - 10, 1);
+						nk_layout_row_static(_ctx, (float)line * s_h, (int)tip_w - 10, 1);
 						nk_label_colored_wrap(_ctx, str, nk_rgb(233, 233, 233));
 						nk_tooltip_end(_ctx);
 					}
@@ -231,8 +233,8 @@ void Page2::Draw(int& running, int& current_page)
 						const char* str = toU8((*itor)->path_2.c_str());
 						int len = strlen(str);
 						int s_w = textwidth((*itor)->path_2.c_str());
-						float line = s_w / tip_w + 1.5;
-						nk_layout_row_static(_ctx, line * s_h, tip_w - 10, 1);
+						double line = s_w / tip_w + 1.5;
+						nk_layout_row_static(_ctx, (float)(line * s_h), (int)tip_w - 10, 1);
 						nk_label_colored_wrap(_ctx, str, nk_rgb(233, 233, 233));
 						nk_tooltip_end(_ctx);
 					}
@@ -564,53 +566,63 @@ wstring Page2::Install_mingw(int id)
 	//	new EFiles(L"lib-for-devcpp_5.4.0\\", L"libeasyx.a")
 	//};
 
+	EMingWGroups* ep = mingw_Groups[id];
+
 	wstring src_lib32, src_libw32, src_lib64, src_libw64;
-	wstring dest_lib32 = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib32 + L"libeasyx.a";
-	wstring dest_libw32 = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib32 + L"libeasyxw.a";
+	wstring dest_lib32 = ep->mingw_path + ep->path_lib32 + L"libeasyx.a";
+	wstring dest_libw32 = ep->mingw_path + ep->path_lib32 + L"libeasyxw.a";
 
-	wstring dest_lib64 = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyx.a";
-	wstring dest_libw64 = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyxw.a";
+	wstring dest_lib64 = ep->mingw_path + ep->path_lib64 + L"libeasyx.a";
+	wstring dest_libw64 = ep->mingw_path + ep->path_lib64 + L"libeasyxw.a";
 
-	src_lib32 = strExeName + L"mingw_easyx\\lib32\\libeasyx.a";
-	src_libw32 = strExeName + L"mingw_easyx\\lib32\\libeasyxw.a";
-	src_lib64 = strExeName + L"mingw_easyx\\lib64\\libeasyx.a";
-	src_libw64 = strExeName + L"mingw_easyx\\lib64\\libeasyxw.a";
+	src_lib32 = strExeName + L"lib_mingw\\lib32\\libeasyx.a";
+	src_libw32 = strExeName + L"lib_mingw\\lib32\\libeasyxw.a";
+	src_lib64 = strExeName + L"lib_mingw\\lib64\\libeasyx.a";
+	src_libw64 = strExeName + L"lib_mingw\\lib64\\libeasyxw.a";
+	wstring src_devcpp_54_x86 = strExeName + L"lib_mingw\\lib-for-devcpp_5.4.0\\libeasyx.a";
 
 	wstring err = L"";
-	if (mingw_Groups[id]->mingw_path != L"")
+	if (ep->mingw_path != L"")
 	{
-		wstring src = strExeName + L"mingw_easyx\\include\\easyx.h";
-		wstring dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"easyx.h";
+		wstring src = strExeName + L"include\\easyx.h";
+		wstring dst = ep->mingw_path + ep->path_h + L"easyx.h";
 		err += copy_Files(src.c_str(), dst.c_str());
 		
-		src = strExeName + L"mingw_easyx\\include\\graphics.h";
-		dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_h + L"graphics.h";
+		src = strExeName + L"include\\graphics.h";
+		dst = ep->mingw_path + ep->path_h + L"graphics.h";
 		err += copy_Files(src.c_str(), dst.c_str());
 
 		if (err != L"")
-			return L"安装失败1";
+			return L"安装失败_inlcude";
 	}
 
-	if (mingw_Groups[id]->path_lib32 != L"")
+	if (ep->path_lib32 != L"" && ep->use_devcpp_5_4_x86 == false)
 	{
-		wstring dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib32 + L"libeasyx.a";
+		wstring dst = ep->mingw_path + ep->path_lib32 + L"libeasyx.a";
 		err += copy_Files(src_lib32.c_str(), dst.c_str());
 
-		dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib32 + L"libeasyxw.a";
+		dst = ep->mingw_path + ep->path_lib32 + L"libeasyxw.a";
 		err += copy_Files(src_libw32.c_str(), dst.c_str());
 		if (err != L"")
-			return L"安装失败2";
+			return L"安装失败_lib32";
+	}
+	if (ep->path_lib32 != L"" && ep->use_devcpp_5_4_x86 == true)
+	{
+		wstring dst = ep->mingw_path + ep->path_lib32 + L"libeasyx.a";
+		err += copy_Files(src_devcpp_54_x86.c_str(), dst.c_str());
+		if (err != L"")
+			return L"安装失败_lib32";
 	}
 
-	if (mingw_Groups[id]->path_lib64 != L"")
+	if (ep->path_lib64 != L"")
 	{
-		wstring dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyx.a";
+		wstring dst = ep->mingw_path + ep->path_lib64 + L"libeasyx.a";
 		err += copy_Files(src_lib64.c_str(), dst.c_str());
 
-		dst = mingw_Groups[id]->mingw_path + mingw_Groups[id]->path_lib64 + L"libeasyxw.a";
+		dst = ep->mingw_path + ep->path_lib64 + L"libeasyxw.a";
 		err += copy_Files(src_libw64.c_str(), dst.c_str());
 		if (err != L"")
-			return L"安装失败3";
+			return L"安装失败_lib64";
 	}
 
 	return err;
@@ -782,10 +794,14 @@ int Page2::toVer(DWORD cl_ver)
 				return 2022;
 			else if (l >= 50/* && l <= 59??*/)
 				return 2026;
+			else
+				return NOTFOUND;
 		}
+	case NOTFOUND:
+		return NOTFOUND;
+	default:
+		return cl_ver;
 	}
-
-	return NOTFOUND;
 }
 
 void Page2::check(EGroups* ep)
@@ -1084,16 +1100,16 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 	wregex rex_sjlj(L"^libgcc_s_sjlj.*?-1\\.dll$", regex_constants::icase);
 	wregex rex_dwarf(L"^libgcc_s_dw2.*?-1\\.dll$", regex_constants::icase);
 
-	if (find_file(bin_path, rex_seh))
+	if (find_file(bin_path, rex_seh) != L"")
 		return _SEH;
 
-	if (find_file(bin_path, rex_sjlj))
+	if (find_file(bin_path, rex_sjlj) != L"")
 		return _SJLJ;
 
-	if (find_file(bin_path, rex_dwarf))
+	if (find_file(bin_path, rex_dwarf) != L"")
 		return _DWARF;
 
-	return L"";
+	return L"NOTFOUND";
 }
 //
 ///// <summary>
@@ -1112,27 +1128,35 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 //	wregex rex(L"Thread model.\\s*?posix", regex_constants::icase);
 //	bool r = regex_search(ver_info, ms, rex);
 //	if (r)
-//		return _POSIX;
+//		return L"";
 //	else
-//		return _WIN32;
+//		return L"";
 //}
 
 /// <summary>
-/// \x86_64-w64-mingw32\lib\ 下
-/// 存在 libucrt.a\ucrt.lib\libucrtbase.a 则是 UCRT
-/// 存在 libmsvcrt.a\msvcrt.lib 且无任何 ucrt 文件，则是 MSVCRT（AI 文档，不准确!!  20.03同时存在两种，最后验证可支持 easyx）
-/// MSVCRT、UCRT
+/// mingw64-...-rt-..  \lib\ 同时存在 ucrt、msvcrt 也能支持 easyx
+/// mingw64-...-ucrt-.. \lib\ 也可能同时存在两者，但是不支持 easyx，改为检测 gcc -v 输出结果
 /// </summary>
 /// <param name="mingw_path"></param>
 /// <returns></returns>
-wstring Page2::check_mingw_runtime(wstring lib_path)
+wstring Page2::check_mingw_runtime(wstring bin_path)
 {
-	wstring c = lib_path + L"libmsvcrt.a";
-	wstring c2 = lib_path + L"msvcrt.lib";
-	if (_waccess(c.c_str(), 0) == 0 || _waccess(c2.c_str(), 0) == 0)
-		return _MSVCRT;
+	//wstring c = lib_path + L"libmsvcrt.a";
+	//wstring c2 = lib_path + L"msvcrt.lib";
+	//if (_waccess(c.c_str(), 0) == 0 || _waccess(c2.c_str(), 0) == 0)
+	//	return _LIBMSVCRT;
 
-	return _UCRT;
+	//return _LIBUCRT;
+	// 
+	wstring cmd = L"\"" + bin_path + L"gcc\" -v";
+	string str = ReadProcessOutput(cmd);
+
+	wstring ver_info = ANSIToUnicode(str.c_str());
+
+	wsmatch ms;
+	wregex rex(L"ucrt", regex_constants::icase);
+	bool r = regex_search(ver_info, ms, rex);
+	return r ? _LIBUCRT : _LIBMSVCRT;
 }
 
 void Page2::check_mingw(EMingWGroups* ep)
@@ -1170,10 +1194,33 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 		return result;
 	}
 
-	///////////////////////////////////////////////////////
-	/////////////// 手动指定路径查找
 
-	int re = analysis_mingw(path, identity, vec);
+	// 如果是 debcpp 5.4.0 32位版本，需要使用特定的 lib
+	// 查找当前目录是否有 devcpp.exe
+	// 如果没有，则返回上一层继续查找，不进入子目录
+	bool repeat = false;
+	bool use_devcpp_5_4 = false;
+	if (identity == DEVCPP || identity == OTHER_IDE)
+	{
+		wregex rex(L"^.*?devcpp.*?\\.exe$", regex_constants::icase);
+		wstring file  = find_file(path, rex);
+		if (file != L"")
+		{
+			int ver = exeVersion(file);
+			if (ver == NOTFOUND)
+				return NOTFOUND;
+
+			int a = ver / 100;
+			int b = ver % 100;
+			if (a == 5 && b == 4)
+				use_devcpp_5_4 = true;
+		}
+	}
+	// c-free 也需要使用特定版本
+	if (identity == CFREE)
+		use_devcpp_5_4 = true;
+
+	int re = analysis_mingw(path, identity, vec, use_devcpp_5_4);
 	if (re == OK || re == ERROR_1)
 		return re;
 
@@ -1196,7 +1243,7 @@ int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
 /// <param name="id"></param>
 /// <param name="vec"></param>
 /// <returns></returns>
-int Page2::analysis_mingw(wstring p, int id, VSIDE* vec)
+int Page2::analysis_mingw(wstring p, int id, VSIDE* vec, bool is_dev)
 {
 	if (p == L"")
 		return NOTFOUND;
@@ -1218,6 +1265,7 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec)
 	wstring mingw_folder = findFolder(p, rex);
 
 	// 如果没有发现 mingwxxx 文件夹，反而发现 bin，则进入查找它
+	// 因为 Clion 中的 mingw 是在 bin 内
 	wstring bin_folder = findFolder(p, L"bin");
 	if (mingw_folder == L"" && bin_folder != L"")
 		mingw_folder = findFolder(bin_folder, rex);
@@ -1265,6 +1313,8 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec)
 		}
 		else if (mingw32_path != L"")
 		{
+			ep->use_devcpp_5_4_x86 = is_dev;		// 只有 32 位需要使用特定的 lib
+
 			// 如果 mingw32 下有 include 文件，说明是安装在此处，如果没有则安装在 mingw32 的上一层目录
 			// 5.6  5.7  版本是这样的
 			wstring include_path = findFolder(mingw32_path, L"include");	// 如果有 include 文件夹，那么 mingw 安装在这里
@@ -1304,7 +1354,7 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec)
 
 		wstring ex = check_mingw_exception(mingw_folder + L"bin\\");
 		//wstring thred = check_mingw_thread(mingw_folder + L"bin\\");
-		wstring runtime = check_mingw_runtime(mingw_path + L"lib\\");
+		wstring runtime = check_mingw_runtime(mingw_folder + L"bin\\");
 
 		check_mingw(ep);
 
@@ -1315,12 +1365,7 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec)
 }
 
 /// <summary>
-/// 支持类型：
-/// x86_64-posix-seh
-/// x86_64-win32-seh
-/// i686-posix-sjlj
-/// i686-win32-sjlj
-/// 支持 MSVCRT 版本，不支持 UCRT 版本。
+/// 支持类型：看项目文档 \doc\
 /// </summary>
 /// <param name="ep"></param>
 /// <param name="type"></param>
@@ -1333,32 +1378,38 @@ int Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime)
 	const wchar_t* e = exception.c_str();
 	const wchar_t* r = runtime.c_str();
 
-	if (_wcsicmp(r, _UCRT) == 0)
+	// ucrt 一定不支持
+	if (_wcsicmp(r, _LIBUCRT) == 0)
 	{
-		vec->msg = L"（不支持的 mignw64_ucrt 版本）";
+		vec->msg = L"（不支持的 mignw64-ucrt 版本）";
 		vec->exist = false;
 		return ERROR_1;
 	}
 
-	if (_wcsicmp(e, _DWARF) == 0)
+	/*if (type == 64 && _wcsicmp(e, _DWARF) == 0)
 	{
 		vec->msg = L"（不支持的 mignw64_dwarf 版本）";
 		vec->exist = false;
 		return ERROR_1;
-	}
+	}*/
 
+	// 64位、seh、msvcrt 一定支持
 	if (_wcsicmp(e, _SEH) == 0 && type == 64)
 		return OK;
 
-	if (_wcsicmp(e, _SJLJ) == 0 && type == 32)
+	// (x32|i686)、sjlj、msvcrt 一定支持
+	// (x32|i686)、dwarf、msvcrt 一定支持
+	if ((_wcsicmp(e, _SJLJ) == 0 || _wcsicmp(e, _DWARF) == 0) && type == 32)
 		return OK;
 
-	wstring err = L"不支持的 mingw64_";
+	wstring err = L"不支持的 ";
 	if (type == 64)
-		err += L"x86_64";
+		err += L"x86_64-";
 	else
-		err += L"i686";
+		err += L"i686-";
 	err += e;
+	err += L"-";
+	err += r;
 	vec->msg = err;
 	vec->exist = false;
 
@@ -1369,14 +1420,17 @@ int Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime)
 /// 
 /// </summary>
 /// <param name="path"></param>
-bool Page2::find_file(wstring path, wregex rex)
+wstring Page2::find_file(wstring path, wregex rex)
 {
+	if (path[lstrlenW(path.c_str()) - 1] != L'\\')
+		path += L"\\";
+
 	wstring searchPath = path + L"*";;
 	WIN32_FIND_DATAW findData;
 	HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
 
 	if (hFind == INVALID_HANDLE_VALUE)
-		return false;
+		return L"";
 
 	wsmatch ms;
 	do {
@@ -1389,11 +1443,11 @@ bool Page2::find_file(wstring path, wregex rex)
 		wstring fc = findData.cFileName;
 		bool r = regex_search(fc, ms, rex);
 		if (r)
-			return true;
+			return path + fc;
 	} while (FindNextFileW(hFind, &findData) != 0);
 	FindClose(hFind);
 
-	return false;
+	return L"";
 }
 
 /// <summary>
@@ -1427,7 +1481,7 @@ string Page2::ReadProcessOutput(const wstring& command)
 	si.hStdError = hWritePipe;
 	si.hStdOutput = hWritePipe;
 	si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-	si.dwFlags = /*STARTF_USESTDHANDLES | */STARTF_USESHOWWINDOW;
+	si.dwFlags = STARTF_USESTDHANDLES;// STARTF_USESHOWWINDOW;
 	si.wShowWindow = SW_HIDE;
 	ZeroMemory(&pi, sizeof(pi));
 
