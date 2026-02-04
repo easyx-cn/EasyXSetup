@@ -41,10 +41,10 @@
 
 #### 不支持版本
 
-- i686-14.2.0-release-win32-dwarf-ucrt-rt_v12-rev0
-- i686-15.2.0-release-mcf-dwarf-ucrt-rt_v13-rev0
+	- i686-14.2.0-release-win32-dwarf-ucrt-rt_v12-rev0
+	- i686-15.2.0-release-mcf-dwarf-ucrt-rt_v13-rev0
 
-- x64-4.7.2-release-win32-sjlj-rev10
-- x86_64-15.2.0-release-mcf-seh-ucrt-rt_v13-rev0
-- ....
-- 总结：ucrt 一定不支持
+	- x64-4.7.2-release-win32-sjlj-rev10
+	- x86_64-15.2.0-release-mcf-seh-ucrt-rt_v13-rev0
+	- ....
+	- 总结：ucrt 一定不支持
