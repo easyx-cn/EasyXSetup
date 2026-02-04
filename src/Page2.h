@@ -26,6 +26,7 @@ using namespace std;
 #define NOTFOUND	0		// 当前目录没有需要的信息，需要继续查找
 #define ERROR_1		-1		// 定义为用户选择了与当前vs版本不符的安装目录
 #define ERROR_SYSTEM -2
+#define NOSURE		-3		// 提示有可能不支持
 
 #define VISUAL_STUDIO	0
 #define MINGW			1
@@ -36,6 +37,10 @@ using namespace std;
 
 #define _LIBUCRT	L"_ucrt"
 #define _LIBMSVCRT	L"_msvcrt"
+
+#define _POSIX	L"_posix"
+#define _WIN32	L"_win32"
+#define _MCF	L"_mcf"
 
 class Page2
 {
@@ -101,9 +106,9 @@ public:
 	wstring find_file(wstring, wregex);
 	int analysis_mingw(wstring p, int, VSIDE*, bool is_dev = false);
 	void check_mingw(EMingWGroups* ep);
-	int Support(VSIDE* vec, int type, wstring exception, wstring runtime);
+	int Support(VSIDE* vec, int type, wstring exception, wstring runtime, wstring thread);
 	wstring check_mingw_exception(wstring);	// seh  sjlj  dwarf
-	//wstring check_mingw_thread(wstring);		// win32 posix
-	wstring check_mingw_runtime(wstring);		// MSVCRT  UCRT
+	wstring check_mingw_thread(string);		// win32 posix mcf
+	wstring check_mingw_runtime(string);		// MSVCRT  UCRT
 	string ReadProcessOutput(const wstring& command);
 };

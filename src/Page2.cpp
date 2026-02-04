@@ -315,6 +315,12 @@ void Page2::Draw(int& running, int& current_page)
 									popup_active = true;
 									popup_msg = (*itor)->msg;
 								}
+								else if (ver == NOSURE)
+								{
+									(*itor)->exist = true;
+									popup_active = true;
+									popup_msg = (*itor)->msg;
+								}
 								else
 								{
 									(*itor)->exist = true;
@@ -1109,29 +1115,33 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 	if (find_file(bin_path, rex_dwarf) != L"")
 		return _DWARF;
 
-	return L"NOTFOUND";
+	return L"";
 }
-//
-///// <summary>
-///// win32、posix
-///// </summary>
-///// <param name="mingw_path"></param>
-///// <returns></returns>
-//wstring Page2::check_mingw_thread(wstring bin_path)
-//{
-//	wstring cmd = L"\"" + bin_path + L"gcc\" -v";
-//	string str = ReadProcessOutput(cmd);
-//
-//	wstring ver_info = ANSIToUnicode(str.c_str());
-//
-//	wsmatch ms;
-//	wregex rex(L"Thread model.\\s*?posix", regex_constants::icase);
-//	bool r = regex_search(ver_info, ms, rex);
-//	if (r)
-//		return L"";
-//	else
-//		return L"";
-//}
+
+/// <summary>
+/// win32、posix
+/// </summary>
+/// <param name="mingw_path"></param>
+/// <returns></returns>
+wstring Page2::check_mingw_thread(string cmdOut)
+{
+	wstring ver_info = ANSIToUnicode(cmdOut.c_str());
+
+	wsmatch ms;
+	wregex rex(L"Thread model.\\s*?posix", regex_constants::icase);
+	bool r = regex_search(ver_info, ms, rex);
+	if (r)
+		return _POSIX;
+	else
+	{
+		wregex rex2(L"Thread model.\\s*?win32", regex_constants::icase);
+		r = regex_search(ver_info, ms, rex);
+		if (r)
+			return _WIN32;
+		else
+			return _MCF;
+	}
+}
 
 /// <summary>
 /// mingw64-...-rt-..  \lib\ 同时存在 ucrt、msvcrt 也能支持 easyx
@@ -1139,19 +1149,9 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 /// </summary>
 /// <param name="mingw_path"></param>
 /// <returns></returns>
-wstring Page2::check_mingw_runtime(wstring bin_path)
+wstring Page2::check_mingw_runtime(string cmdOut)
 {
-	//wstring c = lib_path + L"libmsvcrt.a";
-	//wstring c2 = lib_path + L"msvcrt.lib";
-	//if (_waccess(c.c_str(), 0) == 0 || _waccess(c2.c_str(), 0) == 0)
-	//	return _LIBMSVCRT;
-
-	//return _LIBUCRT;
-	// 
-	wstring cmd = L"\"" + bin_path + L"gcc\" -v";
-	string str = ReadProcessOutput(cmd);
-
-	wstring ver_info = ANSIToUnicode(str.c_str());
+	wstring ver_info = ANSIToUnicode(cmdOut.c_str());
 
 	wsmatch ms;
 	wregex rex(L"ucrt", regex_constants::icase);
@@ -1352,13 +1352,17 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec, bool is_dev)
 
 		ep->mingw_path = mingw_path;
 
+
+		wstring cmd = L"\"" + mingw_folder + L"bin\\gcc\" -v";
+		string str = ReadProcessOutput(cmd);
+
 		wstring ex = check_mingw_exception(mingw_folder + L"bin\\");
-		//wstring thred = check_mingw_thread(mingw_folder + L"bin\\");
-		wstring runtime = check_mingw_runtime(mingw_folder + L"bin\\");
+		wstring thread = check_mingw_thread(str);
+		wstring runtime = check_mingw_runtime(str);
 
 		check_mingw(ep);
 
-		int r = Support(vec, type, ex, runtime);
+		int r = Support(vec, type, ex, runtime, thread);
 		return r;
 	}
 	return NOTFOUND;
@@ -1373,25 +1377,31 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec, bool is_dev)
 /// <param name="exception"></param>
 /// <param name="runtime"></param>
 /// <returns></returns>
-int Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime)
+int Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime, wstring thread)
 {
 	const wchar_t* e = exception.c_str();
 	const wchar_t* r = runtime.c_str();
+	const wchar_t* t = thread.c_str();
+
+	// 允许安装，但提示可能不支持
+	if (e == L"")
+	{
+		wstring er = L"当前 mingw64";
+		er += t;
+		er += r;
+		er += L" 可能不支持";
+		vec->msg = er;
+		//vec->exist = false 允许显示安装
+		return NOSURE;
+	}
 
 	// ucrt 一定不支持
 	if (_wcsicmp(r, _LIBUCRT) == 0)
 	{
-		vec->msg = L"（不支持的 mignw64-ucrt 版本）";
+		vec->msg = L"（不支持的 mignw64_xxx_ucrt 版本）";
 		vec->exist = false;
 		return ERROR_1;
 	}
-
-	/*if (type == 64 && _wcsicmp(e, _DWARF) == 0)
-	{
-		vec->msg = L"（不支持的 mignw64_dwarf 版本）";
-		vec->exist = false;
-		return ERROR_1;
-	}*/
 
 	// 64位、seh、msvcrt 一定支持
 	if (_wcsicmp(e, _SEH) == 0 && type == 64)
@@ -1404,11 +1414,11 @@ int Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime)
 
 	wstring err = L"不支持的 ";
 	if (type == 64)
-		err += L"x86_64-";
+		err += L"x86_64";
 	else
-		err += L"i686-";
+		err += L"i686";
+	err += t;
 	err += e;
-	err += L"-";
 	err += r;
 	vec->msg = err;
 	vec->exist = false;
@@ -1481,7 +1491,7 @@ string Page2::ReadProcessOutput(const wstring& command)
 	si.hStdError = hWritePipe;
 	si.hStdOutput = hWritePipe;
 	si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-	si.dwFlags = STARTF_USESTDHANDLES;// STARTF_USESHOWWINDOW;
+	si.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;	// 必须要有 STARTF_USESTDHANDLES。否则控制台无输出？？
 	si.wShowWindow = SW_HIDE;
 	ZeroMemory(&pi, sizeof(pi));
 
