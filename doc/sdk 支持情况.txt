@@ -48,7 +48,7 @@
 *********** 支持 easyx 的 mingw64 版本
 {
 	- x86_64-8.5.0-release-posix-seh-rt_v10-rev0
-	- x86_64-8.5.0-release-win32-seh-rt_v10-rev0_
+	- x86_64-8.5.0-release-win32-seh-rt_v10-rev0
 	- x86_64-12.2.0-release-win32-seh-msvcrt-rt_v10-rev2
 	- x86_64-12.2.0-release-posix-seh-msvcrt-rt_v10-rev2
 	- x86_64-13.2.0-release-posix-seh-msvcrt-rt_v11-rev1
@@ -63,8 +63,8 @@
 	- 总结：64位、seh、msvcrt 一定支持
 
 
-	- i686-8.5.0-release-posix-sjlj-rt_v10-rev0_		//
-	- i686-8.5.0-release-win32-sjlj-rt_v10-rev0_
+	- i686-8.5.0-release-posix-sjlj-rt_v10-rev0
+	- i686-8.5.0-release-win32-sjlj-rt_v10-rev0
 	- i686-11.2.0-release-posix-sjlj-rt_v9-rev1
 	- ...
 	- 总结：(x32|i686)、sjlj、msvcrt 一定支持
