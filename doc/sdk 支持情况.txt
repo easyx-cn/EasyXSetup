@@ -1,4 +1,9 @@
 
+** 需要 17+ 语言标准：FindSDK 中路径处理函数用到
+** 需要取消代码优化，否则 int a = ver / 100 会被提出掉？？？
+	- 项目属性 -> C/C++ -> Optimization -> Optimization(disabled(/Od))
+
+
 * mingw32/i686-w64-mingw32/lib		-- 32 位
 * mingw32/i686-w64-mingw32/lib64
 	- 
@@ -16,8 +21,29 @@
 	- 64 位使用 lib64\ 下的 lib 即可
 	
 	
+** 可能会同时存在 ucrt msvcrt 两者，无法确定支不支持，测试有些支持有些不支持，改为使用 gcc -v 指定检测
+
+** exception 检测
+	- mingw64/bin/ 根据 dll 判断
+	/// libgcc_s_seh-1.dll
+	/// libgcc_s_sjlj-1.dll
+	/// libgcc_s_dw2-1.dll
+	/// libgcc_s_seh_64-1.dll
 	
+	- 也有可能都不存在，需要根据 gcc -v 判断
 	
+** 32、64 位判断：
+	- x86_64 i686 可能同时存在 32/64 位
+	- 不能根据文件名判断，需要检测内部是否存在 Lib32 lib64 等文件夹
+	
+** thread 判断：
+	-需要根据 gcc -v 输出判断
+	
+** runtime 判断：
+	- 只能根据 gcc -v 判断，
+	- 因为可能会同时存在 ucrt msvcrt 两者，无法确定支不支持
+	- 测试有些支持有些不支持，改为使用 gcc -v 指定检测
+		
 	
 *********** 支持 easyx 的 mingw64 版本
 {
@@ -37,7 +63,7 @@
 	- 总结：64位、seh、msvcrt 一定支持
 
 
-	- i686-8.5.0-release-posix-sjlj-rt_v10-rev0_		// 未标明 msvcrt 或 ucrt 说明都支持, rt 一般表示两者都存在
+	- i686-8.5.0-release-posix-sjlj-rt_v10-rev0_		//
 	- i686-8.5.0-release-win32-sjlj-rt_v10-rev0_
 	- i686-11.2.0-release-posix-sjlj-rt_v9-rev1
 	- ...

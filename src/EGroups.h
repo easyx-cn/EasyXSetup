@@ -40,6 +40,7 @@ public:
 	wstring path_h;						// 固定位 include \\。
 	wstring path_lib32, path_lib64;		// devcpp 存在 lib32\\ 文件夹
 	bool use_devcpp_5_4_x86;				// devcpp5.4.0  x86 版本
+	bool both_32_64;
 
 	EMingWGroups(wstring n, int id)
 	{
@@ -47,6 +48,7 @@ public:
 		identity = id;
 		path_h = L"include\\";
 		use_devcpp_5_4_x86 = false;
+		both_32_64 = false;
 	}
 
 	~EMingWGroups() {}

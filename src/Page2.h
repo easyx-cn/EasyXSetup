@@ -38,9 +38,9 @@ using namespace std;
 #define _LIBUCRT	L"_ucrt"
 #define _LIBMSVCRT	L"_msvcrt"
 
-#define _POSIX	L"_posix"
-#define _WIN32	L"_win32"
-#define _MCF	L"_mcf"
+#define _T_POSIX	L"_posix"
+#define _T_WIN32	L"_win32"
+#define _T_MCF	L"_mcf"
 
 class Page2
 {
@@ -107,8 +107,8 @@ public:
 	int analysis_mingw(wstring p, int, VSIDE*, bool is_dev = false);
 	void check_mingw(EMingWGroups* ep);
 	int Support(VSIDE* vec, int type, wstring exception, wstring runtime, wstring thread);
-	wstring check_mingw_exception(wstring);	// seh  sjlj  dwarf
-	wstring check_mingw_thread(string);		// win32 posix mcf
-	wstring check_mingw_runtime(string);		// MSVCRT  UCRT
+	wstring check_mingw_exception(wstring, wstring);	// seh  sjlj  dwarf
+	wstring check_mingw_thread(wstring);		// win32 posix mcf
+	wstring check_mingw_runtime(wstring);		// MSVCRT  UCRT
 	string ReadProcessOutput(const wstring& command);
 };

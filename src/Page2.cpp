@@ -1097,10 +1097,11 @@ wstring Page2::findFolder(wstring path, const wchar_t* folder)
 /// libgcc_s_sjlj-1.dll
 /// libgcc_s_dw2-1.dll
 /// libgcc_s_seh_64-1.dll
+/// 有可能检测不到这些文件，还需要从 gcc -v 检测！！！
 /// </summary>
 /// <param name="mingw_path"></param>
 /// <returns></returns>
-wstring Page2::check_mingw_exception(wstring bin_path)
+wstring Page2::check_mingw_exception(wstring bin_path, wstring cmdOut)
 {
 	wregex rex_seh(L"^libgcc_s_seh.*?-1\\.dll$", regex_constants::icase);
 	wregex rex_sjlj(L"^libgcc_s_sjlj.*?-1\\.dll$", regex_constants::icase);
@@ -1115,7 +1116,23 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 	if (find_file(bin_path, rex_dwarf) != L"")
 		return _DWARF;
 
-	return L"";
+	wsmatch ms;
+	wregex rex(L"sjlj", regex_constants::icase);
+	bool r = regex_search(cmdOut, ms, rex);
+	if (r)
+		return _SJLJ;
+
+	wregex rex2(L"seh", regex_constants::icase);
+	r = regex_search(cmdOut, ms, rex2);
+	if (r)
+		return _SEH;
+
+	wregex rex3(L"dwarf", regex_constants::icase);
+	r = regex_search(cmdOut, ms, rex3);
+	if (r)
+		return _DWARF;
+
+	return L"unkonw-ex";
 }
 
 /// <summary>
@@ -1123,23 +1140,21 @@ wstring Page2::check_mingw_exception(wstring bin_path)
 /// </summary>
 /// <param name="mingw_path"></param>
 /// <returns></returns>
-wstring Page2::check_mingw_thread(string cmdOut)
+wstring Page2::check_mingw_thread(wstring cmdOut)
 {
-	wstring ver_info = ANSIToUnicode(cmdOut.c_str());
-
 	wsmatch ms;
 	wregex rex(L"Thread model.\\s*?posix", regex_constants::icase);
-	bool r = regex_search(ver_info, ms, rex);
+	bool r = regex_search(cmdOut, ms, rex);
 	if (r)
-		return _POSIX;
+		return _T_POSIX;
 	else
 	{
 		wregex rex2(L"Thread model.\\s*?win32", regex_constants::icase);
-		r = regex_search(ver_info, ms, rex);
+		r = regex_search(cmdOut, ms, rex2);
 		if (r)
-			return _WIN32;
+			return _T_POSIX;
 		else
-			return _MCF;
+			return _T_MCF;
 	}
 }
 
@@ -1149,13 +1164,11 @@ wstring Page2::check_mingw_thread(string cmdOut)
 /// </summary>
 /// <param name="mingw_path"></param>
 /// <returns></returns>
-wstring Page2::check_mingw_runtime(string cmdOut)
+wstring Page2::check_mingw_runtime(wstring cmdOut)
 {
-	wstring ver_info = ANSIToUnicode(cmdOut.c_str());
-
 	wsmatch ms;
 	wregex rex(L"ucrt", regex_constants::icase);
-	bool r = regex_search(ver_info, ms, rex);
+	bool r = regex_search(cmdOut, ms, rex);
 	return r ? _LIBUCRT : _LIBMSVCRT;
 }
 
@@ -1175,6 +1188,9 @@ void Page2::check_mingw(EMingWGroups* ep)
 		//	ep->mingw_path = L"";
 		ep->path_lib32 = L"";
 	}
+
+	if (ep->path_lib32 != L"" && ep->path_lib64 != L"")
+		ep->both_32_64 = true;
 }
 
 int Page2::FindSDK(wstring path, int identity, VSIDE* vec, bool g_bX64)
@@ -1272,8 +1288,8 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec, bool is_dev)
 
 	if (mingw_folder != L"")
 	{
-		wstring x86_64_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 64 位
-		wstring i686_path = findFolder(mingw_folder, L"i686-w64-mingw32");		// 32 位
+		wstring x86_64_path = findFolder(mingw_folder, L"x86_64-w64-mingw32");		// 内部可能有 lib/lib32 同时支持 32/64 位
+		wstring i686_path = findFolder(mingw_folder, L"i686-w64-mingw32");		// 也有可能存在 lib/lib64 两个
 		wstring mingw32_path = findFolder(mingw_folder, L"mingw32");
 		wstring mingw_path = L"";
 		int type;
@@ -1352,13 +1368,13 @@ int Page2::analysis_mingw(wstring p, int id, VSIDE* vec, bool is_dev)
 
 		ep->mingw_path = mingw_path;
 
-
 		wstring cmd = L"\"" + mingw_folder + L"bin\\gcc\" -v";
 		string str = ReadProcessOutput(cmd);
+		wstring ver_info = ANSIToUnicode(str.c_str());
 
-		wstring ex = check_mingw_exception(mingw_folder + L"bin\\");
-		wstring thread = check_mingw_thread(str);
-		wstring runtime = check_mingw_runtime(str);
+		wstring ex = check_mingw_exception(mingw_folder + L"bin\\", ver_info);
+		wstring thread = check_mingw_thread(ver_info);
+		wstring runtime = check_mingw_runtime(ver_info);
 
 		check_mingw(ep);
 
@@ -1403,13 +1419,15 @@ int Page2::Support(VSIDE* vec, int type, wstring exception, wstring runtime, wst
 		return ERROR_1;
 	}
 
+	EMingWGroups* ep = mingw_Groups[vec->id];
+
 	// 64位、seh、msvcrt 一定支持
-	if (_wcsicmp(e, _SEH) == 0 && type == 64)
+	if (_wcsicmp(e, _SEH) == 0 && (type == 64 || ep->both_32_64))
 		return OK;
 
 	// (x32|i686)、sjlj、msvcrt 一定支持
 	// (x32|i686)、dwarf、msvcrt 一定支持
-	if ((_wcsicmp(e, _SJLJ) == 0 || _wcsicmp(e, _DWARF) == 0) && type == 32)
+	if ((_wcsicmp(e, _SJLJ) == 0 || _wcsicmp(e, _DWARF) == 0) && (type == 32 || ep->both_32_64))
 		return OK;
 
 	wstring err = L"不支持的 ";
